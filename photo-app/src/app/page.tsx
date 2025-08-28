@@ -6,10 +6,11 @@ import { generateSessionId } from '@/lib/utils'
 import { Photo } from '@/lib/types'
 
 export default function PhotoApp() {
-  const [step, setStep] = useState<'welcome' | 'camera' | 'preview' | 'uploading' | 'processing' | 'result' | 'error'>('welcome')
+  const [step, setStep] = useState<'welcome' | 'camera' | 'preview' | 'caption' | 'uploading' | 'processing' | 'result' | 'error'>('welcome')
   const [capturedImage, setCapturedImage] = useState<string | null>(null)
   const [uploadedPhoto, setUploadedPhoto] = useState<Photo | null>(null)
   const [error, setError] = useState<string>('')
+  const [caption, setCaption] = useState<string>('')
   const [userSession] = useState(() => generateSessionId())
   
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -77,6 +78,9 @@ export default function PhotoApp() {
       const formData = new FormData()
       formData.append('photo', blob, 'photo.jpg')
       formData.append('userSession', userSession)
+      if (caption.trim()) {
+        formData.append('caption', caption.trim())
+      }
 
       const uploadResponse = await fetch('/api/upload', {
         method: 'POST',
@@ -99,7 +103,7 @@ export default function PhotoApp() {
       setError('网络错误，请重试')
       setStep('error')
     }
-  }, [capturedImage, userSession])
+  }, [capturedImage, userSession, caption])
 
   const checkProcessingStatus = useCallback(async (photoId: string) => {
     const checkStatus = async () => {
@@ -260,11 +264,51 @@ export default function PhotoApp() {
                   <span>重拍</span>
                 </button>
                 <button
-                  onClick={uploadPhoto}
+                  onClick={() => setStep('caption')}
                   className="bg-gradient-to-r from-pink-500 to-purple-600 text-white py-2 px-4 rounded-lg font-medium hover:from-pink-600 hover:to-purple-700 transition-all duration-200 flex items-center justify-center space-x-2"
                 >
                   <Upload className="w-4 h-4" />
-                  <span>生成头像</span>
+                  <span>下一步</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === 'caption' && (
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800 mb-2">个性化定制</h3>
+                <p className="text-gray-600 text-sm mb-4">您可以描述希望的风格或特色，让AI为您生成更符合期望的卡通头像</p>
+              </div>
+              <div>
+                <label htmlFor="caption" className="block text-sm font-medium text-gray-700 mb-2">
+                  个性化描述（可选）
+                </label>
+                <textarea
+                  id="caption"
+                  value={caption}
+                  onChange={(e) => setCaption(e.target.value)}
+                  placeholder="例如：可爱的动漫风格，戴眼镜，微笑表情..."
+                  className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                  rows={3}
+                  maxLength={200}
+                />
+                <div className="text-right text-xs text-gray-500 mt-1">
+                  {caption.length}/200
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => setStep('preview')}
+                  className="bg-gray-500 text-white py-2 px-4 rounded-lg font-medium hover:bg-gray-600 transition-colors"
+                >
+                  返回
+                </button>
+                <button
+                  onClick={uploadPhoto}
+                  className="bg-gradient-to-r from-pink-500 to-purple-600 text-white py-2 px-4 rounded-lg font-medium hover:from-pink-600 hover:to-purple-700 transition-all duration-200"
+                >
+                  生成头像
                 </button>
               </div>
             </div>

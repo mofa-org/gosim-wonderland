@@ -18,7 +18,9 @@ export const getDatabase = () => {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         approved_at DATETIME,
         user_session TEXT,
-        processing_error TEXT
+        processing_error TEXT,
+        caption TEXT,
+        ai_description TEXT
       )
     `)
     

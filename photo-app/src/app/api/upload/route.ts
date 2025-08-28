@@ -2,19 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { writeFile, mkdir } from 'fs/promises'
 import path from 'path'
 import { PhotoService } from '@/lib/db-operations'
-import OpenAI from 'openai'
 
 const photoService = new PhotoService()
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-})
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000'
 
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
     const file = formData.get('photo') as File
     const userSession = formData.get('userSession') as string
+    const caption = formData.get('caption') as string
 
     if (!file) {
       return NextResponse.json(
@@ -37,10 +34,10 @@ export async function POST(request: NextRequest) {
     const originalUrl = `/uploads/${fileName}`
     
     // 保存到数据库
-    const photo = photoService.createPhoto(originalUrl, userSession)
+    const photo = photoService.createPhoto(originalUrl, userSession, caption)
     
-    // 异步处理AI转换
-    processWithAI(photo.id, buffer)
+    // 异步调用FastAPI服务处理AI转换
+    processWithFastAPI(photo.id, buffer, caption)
       .catch(error => {
         console.error('AI处理失败:', error)
         photoService.updatePhoto(photo.id, {
@@ -62,59 +59,40 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function processWithAI(photoId: string, imageBuffer: Buffer) {
+async function processWithFastAPI(photoId: string, imageBuffer: Buffer, caption?: string) {
   try {
-    const base64Image: string = imageBuffer.toString('base64')
+    const base64Image = imageBuffer.toString('base64')
     
-    // 第一步：使用GPT-4 Vision分析图片，生成详细描述
-    const analysisResponse = await openai.chat.completions.create({
-      model: "gpt-4-vision-preview",
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: "请详细描述这张照片中人物的特征，包括：面部特征、发型、表情、姿势、服装等。用英文回答，控制在100词以内。"
-            },
-            {
-              type: "image_url",
-              image_url: {
-                url: `data:image/jpeg;base64,${base64Image}`
-              }
-            }
-          ]
-        }
-      ],
-      max_tokens: 150
+    // 调用FastAPI服务处理图像
+    const response = await fetch(`${AI_SERVICE_URL}/process-image-base64`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        image_base64: base64Image,
+        caption: caption || undefined,
+        user_session: undefined
+      })
     })
 
-    const description = analysisResponse.choices[0]?.message?.content || "a person"
-    
-    // 第二步：基于描述使用DALL-E 3生成卡通图像
-    const imageResponse = await openai.images.generate({
-      model: "dall-e-3",
-      prompt: `Create a cute cartoon avatar in GOSIM style based on: ${description}. 
-        Style requirements: 
-        - Bright pastel colors (macaroon color palette)
-        - Simplified but adorable cartoon style
-        - Clean lines and cute proportions
-        - Maintain the person's key facial features and expression
-        - Simple solid color background
-        - High quality, professional cartoon illustration`,
-      size: "1024x1024",
-      quality: "standard",
-      n: 1,
-    })
-
-    const generatedImageUrl = imageResponse.data?.[0]?.url
-    
-    if (!generatedImageUrl) {
-      throw new Error('未能生成图像')
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(`FastAPI服务返回错误: ${response.status} ${errorText}`)
     }
 
-    // 第三步：下载生成的图像并保存到本地
-    const imageDownloadResponse = await fetch(generatedImageUrl)
+    const result = await response.json()
+    
+    if (!result.success) {
+      throw new Error(result.error || 'AI服务处理失败')
+    }
+
+    // 下载生成的卡通图像并保存到本地
+    const imageDownloadResponse = await fetch(result.cartoon_url)
+    if (!imageDownloadResponse.ok) {
+      throw new Error('下载生成的图像失败')
+    }
+    
     const imageArrayBuffer = await imageDownloadResponse.arrayBuffer()
     const downloadedImageBuffer = Buffer.from(imageArrayBuffer)
     
@@ -128,11 +106,12 @@ async function processWithAI(photoId: string, imageBuffer: Buffer) {
     
     // 更新数据库
     photoService.updatePhoto(photoId, {
-      cartoon_url: cartoonUrl
+      cartoon_url: cartoonUrl,
+      ai_description: result.ai_description
     })
     
   } catch (error) {
-    console.error('AI处理详细错误:', error)
+    console.error('FastAPI处理详细错误:', error)
     throw new Error(`AI处理失败: ${error instanceof Error ? error.message : String(error)}`)
   }
 }

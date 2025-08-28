@@ -95,4 +95,4 @@ coverage/
 .nyc_output/
 
 # Turbopack cache
-.turbopack/
+.turbopack/ai-service/venv/
