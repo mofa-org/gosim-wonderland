@@ -1,0 +1,8 @@
+*.png
+.env
+/qianwen_outputs/
+/wanxiang_outputs/
+http_test.py
+tongyi_qianwen_image_edit.py
+tongyi_wanxiang_image_edit.py
+/outputs/
