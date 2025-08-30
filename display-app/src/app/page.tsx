@@ -77,9 +77,25 @@ export default function DisplayApp() {
   return (
     <div className="min-h-screen bg-[#FFC837] flex flex-col">
       {/* Header */}
-      <header className="bg-[#6DCACE] border-b-4 border-black text-black py-3 px-6 text-center">
-        <h1 className="text-2xl lg:text-3xl xl:text-4xl font-bold mb-1">GOSIM Wonderland</h1>
-        <p className="text-base lg:text-lg xl:text-xl font-bold">梦幻卡通展示墙</p>
+      <header className="bg-[#6DCACE] border-b-4 border-black text-black py-3 px-6">
+        <div className="flex items-center justify-between">
+          {/* 左侧标题 */}
+          <div className="text-left">
+            <h1 className="text-2xl lg:text-3xl xl:text-4xl font-bold mb-1">GOSIM Wonderland</h1>
+            <p className="text-base lg:text-lg xl:text-xl font-bold">梦幻卡通展示墙</p>
+          </div>
+          
+          {/* 右侧二维码 */}
+          <div className="bg-white border-4 border-black p-2">
+            <Image
+              src="/qr-code.png"
+              alt="扫描二维码拍照"
+              width={80}
+              height={80}
+              className="w-20 h-20 object-contain"
+            />
+          </div>
+        </div>
         
         {/* 状态指示 */}
         <div className="flex items-center justify-center mt-4 space-x-6">
@@ -213,7 +229,7 @@ export default function DisplayApp() {
                 </div>
 
                 {/* 二维码区域 */}
-                <div className="bg-[#6DCACE] border-4 border-black p-4">
+                {/* <div className="bg-[#6DCACE] border-4 border-black p-4">
                   <h4 className="text-lg font-bold text-black mb-3 text-center">扫码拍照</h4>
                   <div className="w-32 h-32 mx-auto bg-white border-4 border-black p-2">
                     <Image
@@ -227,7 +243,7 @@ export default function DisplayApp() {
                   <p className="text-xs font-bold text-black text-center mt-2">
                     扫码生成卡通头像
                   </p>
-                </div>
+                </div> */}
               </div>
             </div>
           </div>
