@@ -77,22 +77,22 @@ export default function DisplayApp() {
   return (
     <div className="min-h-screen bg-[#FFC837] flex flex-col">
       {/* Header */}
-      <header className="bg-[#6DCACE] border-b-4 border-black text-black p-6 text-center">
-        <h1 className="text-4xl font-bold mb-2">GOSIM Wonderland</h1>
-        <p className="text-xl font-bold">梦幻卡通展示墙</p>
+      <header className="bg-[#6DCACE] border-b-4 border-black text-black py-4 px-8 text-center">
+        <h1 className="text-3xl lg:text-5xl xl:text-6xl font-bold mb-2">GOSIM Wonderland</h1>
+        <p className="text-lg lg:text-2xl xl:text-3xl font-bold">梦幻卡通展示墙</p>
         
         {/* 状态指示 */}
-        <div className="flex items-center justify-center mt-4 space-x-4">
-          <div className={`flex items-center space-x-2 px-3 py-2 border-4 border-black text-sm font-bold ${
+        <div className="flex items-center justify-center mt-4 space-x-6">
+          <div className={`flex items-center space-x-3 px-4 py-3 border-4 border-black text-base lg:text-lg font-bold ${
             isConnected ? 'bg-[#6CC8CC] text-black' : 'bg-[#FC6A59] text-black'
           }`}>
-            <div className={`w-3 h-3 ${
+            <div className={`w-4 h-4 lg:w-5 lg:h-5 ${
               isConnected ? 'bg-black' : 'bg-black'
             }`}></div>
             <span>{isConnected ? '实时连接' : '连接断开'}</span>
           </div>
           
-          <div className="bg-white border-4 border-black px-3 py-2 text-sm font-bold text-black">
+          <div className="bg-white border-4 border-black px-4 py-3 text-base lg:text-lg font-bold text-black">
             {photos.length} 张照片
           </div>
         </div>
@@ -126,48 +126,86 @@ export default function DisplayApp() {
         )}
 
         {!error && photos.length > 0 && currentPhoto && (
-          <div className="w-full max-w-4xl">
-            <div className="bg-white border-4 border-black">
-              {/* 照片显示 */}
-              <div className="aspect-square relative bg-white">
-                <Image
-                  src={currentPhoto.cartoon_url || currentPhoto.original_url}
-                  alt="卡通头像"
-                  fill
-                  className="object-cover transition-all duration-1000"
-                  priority
-                />
-              </div>
-
-              {/* 照片信息 */}
-              <div className="p-6 bg-[#6DCACE] border-t-4 border-black text-black text-center">
-                <div className="flex items-center justify-center space-x-4 text-lg font-bold">
-                  <span className="bg-[#FFC837] border-4 border-black px-4 py-2">
-                    {currentIndex + 1} / {photos.length}
-                  </span>
-                  <span className="bg-white border-4 border-black px-4 py-2">
-                    {new Date(currentPhoto.created_at).toLocaleString('zh-CN')}
-                  </span>
+          <div className="w-full h-full flex items-center justify-center">
+            <div className="w-full max-w-7xl h-full flex flex-col lg:flex-row gap-8">
+              {/* 主照片显示区 - 横屏时占用更多空间 */}
+              <div className="flex-1 flex items-center justify-center">
+                <div className="bg-white border-4 border-black max-h-[70vh] w-full">
+                  <div className="aspect-square lg:aspect-[4/3] xl:aspect-[16/10] relative bg-white">
+                    <Image
+                      src={currentPhoto.cartoon_url || currentPhoto.original_url}
+                      alt="卡通头像"
+                      fill
+                      className="object-contain transition-all duration-1000"
+                      priority
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* 进度条 */}
-            <div className="mt-6 bg-white border-4 border-black h-6">
-              <div 
-                className="bg-[#FC6A59] h-full transition-all duration-100"
-                style={{
-                  width: `${((currentIndex + 1) / photos.length) * 100}%`
-                }}
-              ></div>
+              {/* 侧边信息栏 - 横屏时显示在右侧 */}
+              <div className="lg:w-80 xl:w-96 flex flex-col justify-center space-y-6">
+                {/* 照片信息 */}
+                <div className="bg-[#6DCACE] border-4 border-black p-6">
+                  <h3 className="text-2xl font-bold text-black mb-4 text-center">照片信息</h3>
+                  <div className="space-y-3">
+                    <div className="bg-white border-4 border-black p-3 text-center">
+                      <span className="text-lg font-bold text-black">
+                        {currentIndex + 1} / {photos.length}
+                      </span>
+                    </div>
+                    <div className="bg-[#FFC837] border-4 border-black p-3 text-center">
+                      <span className="text-sm font-bold text-black">
+                        {new Date(currentPhoto.created_at).toLocaleString('zh-CN')}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 进度条 */}
+                <div className="bg-white border-4 border-black h-8">
+                  <div 
+                    className="bg-[#FC6A59] h-full transition-all duration-100 flex items-center justify-end pr-2"
+                    style={{
+                      width: `${((currentIndex + 1) / photos.length) * 100}%`
+                    }}
+                  >
+                    <span className="text-black text-xs font-bold">
+                      {Math.round(((currentIndex + 1) / photos.length) * 100)}%
+                    </span>
+                  </div>
+                </div>
+
+                {/* 缩略图预览 */}
+                <div className="bg-white border-4 border-black p-4">
+                  <h4 className="text-lg font-bold text-black mb-3 text-center">预览</h4>
+                  <div className="grid grid-cols-3 gap-2">
+                    {photos.slice(0, 9).map((photo, index) => (
+                      <div 
+                        key={photo.id}
+                        className={`aspect-square relative border-2 ${
+                          index === currentIndex ? 'border-[#FC6A59]' : 'border-black'
+                        }`}
+                      >
+                        <Image
+                          src={photo.cartoon_url || photo.original_url}
+                          alt="预览"
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}
       </main>
 
       {/* Footer */}
-      <footer className="bg-black border-t-4 border-black text-[#FFC837] p-4 text-center">
-        <p className="text-sm font-bold">
+      <footer className="bg-black border-t-4 border-black text-[#FFC837] py-3 px-8 text-center">
+        <p className="text-sm lg:text-base xl:text-lg font-bold">
           扫描二维码拍照，生成专属GOSIM风格卡通头像
         </p>
       </footer>
