@@ -77,9 +77,9 @@ export default function DisplayApp() {
   return (
     <div className="min-h-screen bg-[#FFC837] flex flex-col">
       {/* Header */}
-      <header className="bg-[#6DCACE] border-b-4 border-black text-black py-4 px-8 text-center">
-        <h1 className="text-3xl lg:text-5xl xl:text-6xl font-bold mb-2">GOSIM Wonderland</h1>
-        <p className="text-lg lg:text-2xl xl:text-3xl font-bold">梦幻卡通展示墙</p>
+      <header className="bg-[#6DCACE] border-b-4 border-black text-black py-3 px-6 text-center">
+        <h1 className="text-2xl lg:text-3xl xl:text-4xl font-bold mb-1">GOSIM Wonderland</h1>
+        <p className="text-base lg:text-lg xl:text-xl font-bold">梦幻卡通展示墙</p>
         
         {/* 状态指示 */}
         <div className="flex items-center justify-center mt-4 space-x-6">
@@ -117,9 +117,23 @@ export default function DisplayApp() {
                   <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
                 </svg>
               </div>
-              <h2 className="text-3xl font-bold mb-4">欢迎来到 GOSIM Wonderland</h2>
+              <h2 className="text-3xl font-bold mb-6">欢迎来到 GOSIM Wonderland</h2>
+              
+              {/* 二维码区域 */}
+              <div className="mb-6">
+                <div className="w-48 h-48 mx-auto bg-white border-4 border-black p-4">
+                  <Image
+                    src="/qr-code.png"
+                    alt="扫描二维码拍照"
+                    width={176}
+                    height={176}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+              </div>
+              
               <p className="text-xl font-bold">
-                还没有照片，快去扫码拍照生成你的专属卡通头像吧！
+                扫描上方二维码拍照生成你的专属卡通头像！
               </p>
             </div>
           </div>
@@ -196,6 +210,23 @@ export default function DisplayApp() {
                       </div>
                     ))}
                   </div>
+                </div>
+
+                {/* 二维码区域 */}
+                <div className="bg-[#6DCACE] border-4 border-black p-4">
+                  <h4 className="text-lg font-bold text-black mb-3 text-center">扫码拍照</h4>
+                  <div className="w-32 h-32 mx-auto bg-white border-4 border-black p-2">
+                    <Image
+                      src="/qr-code.png"
+                      alt="扫描二维码拍照"
+                      width={112}
+                      height={112}
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                  <p className="text-xs font-bold text-black text-center mt-2">
+                    扫码生成卡通头像
+                  </p>
                 </div>
               </div>
             </div>
