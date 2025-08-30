@@ -21,9 +21,17 @@ install_system_deps() {
         
         # 安装Node.js和npm
         if ! command -v node >/dev/null 2>&1; then
-            echo "📦 安装Node.js..."
-            curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+            echo "📦 安装Node.js 20..."
+            curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
             sudo apt-get install -y nodejs
+        else
+            # 检查Node.js版本
+            NODE_VERSION=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
+            if [ "$NODE_VERSION" -lt 20 ]; then
+                echo "⬆️ 升级Node.js到20..."
+                curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+                sudo apt-get install -y nodejs
+            fi
         fi
         
         # 安装Python3和pip
