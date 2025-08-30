@@ -2,7 +2,7 @@ export interface Photo {
   id: string
   original_url: string
   cartoon_url?: string
-  status: 'pending' | 'approved' | 'rejected'
+  status: 'pending' | 'completed' | 'failed' | 'approved' | 'rejected'
   created_at: string
   approved_at?: string
   user_session?: string
@@ -21,4 +21,4 @@ export interface ApiResponse<T = any> {
   error?: string
 }
 
-export type PhotoStatus = 'pending' | 'approved' | 'rejected'
+export type PhotoStatus = 'pending' | 'completed' | 'failed' | 'approved' | 'rejected'

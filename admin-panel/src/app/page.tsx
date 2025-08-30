@@ -7,6 +7,8 @@ import { Photo, PhotoStatus } from "@/lib/types";
 
 interface Stats {
   pending: number;
+  completed: number;
+  failed: number;
   approved: number;
   rejected: number;
 }
@@ -15,10 +17,12 @@ export default function AdminPanel() {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [stats, setStats] = useState<Stats>({
     pending: 0,
+    completed: 0,
+    failed: 0,
     approved: 0,
     rejected: 0,
   });
-  const [currentTab, setCurrentTab] = useState<PhotoStatus>("pending");
+  const [currentTab, setCurrentTab] = useState<PhotoStatus>("completed");
   const [loading, setLoading] = useState(false);
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
 
@@ -124,6 +128,10 @@ export default function AdminPanel() {
     switch (tab) {
       case "pending":
         return <Clock className="w-4 h-4" />;
+      case "completed":
+        return <CheckCircle className="w-4 h-4" />;
+      case "failed":
+        return <XCircle className="w-4 h-4" />;
       case "approved":
         return <CheckCircle className="w-4 h-4" />;
       case "rejected":
@@ -134,7 +142,11 @@ export default function AdminPanel() {
   const getTabName = (tab: PhotoStatus) => {
     switch (tab) {
       case "pending":
+        return "处理中";
+      case "completed":
         return "待审核";
+      case "failed":
+        return "处理失败";
       case "approved":
         return "已通过";
       case "rejected":
@@ -143,22 +155,22 @@ export default function AdminPanel() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-[#FFC837]">
       {/* Header */}
-      <header className="bg-white shadow-sm">
+      <header className="bg-[#6DCACE] border-b-4 border-black">
         <div className="max-w-7xl mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">
+              <h1 className="text-3xl font-bold text-black">
                 GOSIM Wonderland 管理后台
               </h1>
-              <p className="text-gray-600 mt-1">照片审核与管理</p>
+              <p className="text-black mt-1 font-bold">照片审核与管理</p>
             </div>
 
             <button
               onClick={loadPhotos}
               disabled={loading}
-              className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              className="flex items-center space-x-2 bg-[#FFC837] text-black px-4 py-2 border-4 border-black font-bold hover:bg-black hover:text-[#FFC837] transition-colors disabled:opacity-50"
             >
               <RefreshCw
                 className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
@@ -168,15 +180,15 @@ export default function AdminPanel() {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-4 mt-6">
-            {(["pending", "approved", "rejected"] as PhotoStatus[]).map(
+          <div className="grid grid-cols-5 gap-4 mt-6">
+            {(["pending", "completed", "failed", "approved", "rejected"] as PhotoStatus[]).map(
               (status) => (
-                <div key={status} className="bg-gray-50 rounded-lg p-4">
-                  <div className="flex items-center space-x-2 text-gray-600">
+                <div key={status} className="bg-white border-4 border-black p-4">
+                  <div className="flex items-center space-x-2 text-black">
                     {getTabIcon(status)}
-                    <span className="text-sm">{getTabName(status)}</span>
+                    <span className="text-xs font-bold">{getTabName(status)}</span>
                   </div>
-                  <div className="text-2xl font-bold mt-1">{stats[status]}</div>
+                  <div className="text-2xl font-bold mt-1 text-black">{stats[status]}</div>
                 </div>
               ),
             )}
@@ -186,22 +198,22 @@ export default function AdminPanel() {
 
       {/* Tabs */}
       <div className="max-w-7xl mx-auto px-4">
-        <div className="border-b border-gray-200">
-          <nav className="flex space-x-8">
-            {(["pending", "approved", "rejected"] as PhotoStatus[]).map(
+        <div className="border-b-4 border-black">
+          <nav className="flex space-x-2">
+            {(["completed", "pending", "failed", "approved", "rejected"] as PhotoStatus[]).map(
               (tab) => (
                 <button
                   key={tab}
                   onClick={() => setCurrentTab(tab)}
-                  className={`flex items-center space-x-2 py-4 px-1 border-b-2 font-medium text-sm ${
+                  className={`flex items-center space-x-2 py-4 px-3 border-4 border-black font-bold text-xs ${
                     currentTab === tab
-                      ? "border-blue-500 text-blue-600"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                      ? "bg-black text-[#FFC837]"
+                      : "bg-white text-black hover:bg-black hover:text-white"
                   }`}
                 >
                   {getTabIcon(tab)}
                   <span>{getTabName(tab)}</span>
-                  <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded-full text-xs">
+                  <span className="bg-[#FC6A59] text-black px-2 py-1 text-xs font-bold">
                     {stats[tab]}
                   </span>
                 </button>
@@ -215,22 +227,29 @@ export default function AdminPanel() {
       <main className="max-w-7xl mx-auto px-4 py-6">
         {loading && photos.length === 0 && (
           <div className="text-center py-12">
-            <RefreshCw className="w-8 h-8 animate-spin mx-auto text-gray-400" />
-            <p className="text-gray-500 mt-2">加载中...</p>
+            <div className="w-16 h-16 mx-auto relative animate-spin">
+              <div className="absolute top-0 left-0 w-8 h-8 bg-[#FC6A59]"></div>
+              <div className="absolute top-0 right-0 w-8 h-8 bg-[#6CC8CC]"></div>
+              <div className="absolute bottom-0 left-0 w-8 h-8 bg-[#FFC63E]"></div>
+              <div className="absolute bottom-0 right-0 w-8 h-8 bg-[#FD543F]"></div>
+              <div className="absolute inset-2 bg-white"></div>
+            </div>
+            <p className="text-black font-bold mt-4 bg-white border-4 border-black p-3">加载中...</p>
           </div>
         )}
 
         {!loading && photos.length === 0 && (
           <div className="text-center py-12">
-            <div className="text-gray-400 text-6xl mb-4"></div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              暂无{getTabName(currentTab)}的照片
-            </h3>
-            <p className="text-gray-500">
-              {currentTab === "pending"
-                ? "等待用户上传照片..."
-                : "切换到其他标签页查看更多照片"}
-            </p>
+            <div className="bg-white border-4 border-black p-8">
+              <h3 className="text-lg font-bold text-black mb-2">
+                暂无{getTabName(currentTab)}的照片
+              </h3>
+              <p className="text-black font-bold">
+                {currentTab === "pending"
+                  ? "等待用户上传照片..."
+                  : "切换到其他标签页查看更多照片"}
+              </p>
+            </div>
           </div>
         )}
 
@@ -238,16 +257,16 @@ export default function AdminPanel() {
           {photos.map((photo) => (
             <div
               key={photo.id}
-              className="bg-white rounded-xl shadow-sm overflow-hidden"
+              className="bg-white border-4 border-black"
             >
               {/* 照片对比 */}
               <div className="space-y-3 p-4">
                 {/* 原图 */}
                 <div>
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">
+                  <h4 className="text-sm font-bold text-black mb-2 bg-[#6DCACE] p-2 border-4 border-black text-center">
                     原图
                   </h4>
-                  <div className="aspect-square relative bg-gray-100 rounded-lg overflow-hidden">
+                  <div className="aspect-square relative bg-white border-4 border-black">
                     <Image
                       src={photo.original_url}
                       alt="原图"
@@ -260,10 +279,10 @@ export default function AdminPanel() {
                 {/* 卡通图 */}
                 {photo.cartoon_url && (
                   <div>
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">
+                    <h4 className="text-sm font-bold text-black mb-2 bg-[#FFC837] p-2 border-4 border-black text-center">
                       卡通图
                     </h4>
-                    <div className="aspect-square relative bg-gray-100 rounded-lg overflow-hidden">
+                    <div className="aspect-square relative bg-white border-4 border-black">
                       <Image
                         src={photo.cartoon_url}
                         alt="卡通图"
@@ -276,8 +295,8 @@ export default function AdminPanel() {
 
                 {/* 处理错误 */}
                 {photo.processing_error && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                    <p className="text-red-600 text-sm">
+                  <div className="bg-[#FD543F] border-4 border-black p-3">
+                    <p className="text-black text-sm font-bold">
                       <strong>处理失败：</strong>
                       {photo.processing_error}
                     </p>
@@ -286,8 +305,8 @@ export default function AdminPanel() {
               </div>
 
               {/* 照片信息 */}
-              <div className="px-4 py-3 bg-gray-50">
-                <div className="text-xs text-gray-500 space-y-1">
+              <div className="px-4 py-3 bg-[#6DCACE] border-t-4 border-black">
+                <div className="text-xs text-black font-bold space-y-1">
                   <div>ID: {photo.id.substring(0, 8)}...</div>
                   <div>
                     上传: {new Date(photo.created_at).toLocaleString("zh-CN")}
@@ -301,14 +320,14 @@ export default function AdminPanel() {
                 </div>
 
                 {/* 操作按钮 */}
-                {currentTab === "pending" && !photo.processing_error && (
+                {currentTab === "completed" && !photo.processing_error && (
                   <div className="flex space-x-2 mt-3">
                     <button
                       onClick={() => handleApprove(photo.id)}
                       disabled={
                         processingIds.has(photo.id) || !photo.cartoon_url
                       }
-                      className="flex-1 bg-green-600 text-white py-2 px-3 rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-1 text-sm"
+                      className="flex-1 bg-[#6CC8CC] text-black py-2 px-3 border-4 border-black font-bold hover:bg-black hover:text-[#6CC8CC] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-1 text-sm transition-colors"
                     >
                       <Check className="w-4 h-4" />
                       <span>
@@ -318,7 +337,7 @@ export default function AdminPanel() {
                     <button
                       onClick={() => handleReject(photo.id)}
                       disabled={processingIds.has(photo.id)}
-                      className="flex-1 bg-red-600 text-white py-2 px-3 rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-1 text-sm"
+                      className="flex-1 bg-[#FC6A59] text-black py-2 px-3 border-4 border-black font-bold hover:bg-black hover:text-[#FC6A59] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-1 text-sm transition-colors"
                     >
                       <X className="w-4 h-4" />
                       <span>
@@ -328,12 +347,12 @@ export default function AdminPanel() {
                   </div>
                 )}
 
-                {currentTab === "pending" && photo.processing_error && (
+                {(currentTab === "failed" || photo.processing_error) && (
                   <div className="mt-3">
                     <button
                       onClick={() => handleReject(photo.id)}
                       disabled={processingIds.has(photo.id)}
-                      className="w-full bg-red-600 text-white py-2 px-3 rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-1 text-sm"
+                      className="w-full bg-[#FD543F] text-black py-2 px-3 border-4 border-black font-bold hover:bg-black hover:text-[#FD543F] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-1 text-sm transition-colors"
                     >
                       <X className="w-4 h-4" />
                       <span>

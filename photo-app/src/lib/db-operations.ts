@@ -5,21 +5,22 @@ import { v4 as uuidv4 } from 'uuid'
 export class PhotoService {
   private db = getDatabase()
 
-  createPhoto(originalUrl: string, userSession?: string): Photo {
+  createPhoto(originalUrl: string, userSession?: string, caption?: string): Photo {
     const id = uuidv4()
     const photo: Omit<Photo, 'created_at'> = {
       id,
       original_url: originalUrl,
       status: 'pending',
-      user_session: userSession
+      user_session: userSession,
+      caption: caption
     }
 
     const stmt = this.db.prepare(`
-      INSERT INTO photos (id, original_url, status, user_session)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO photos (id, original_url, status, user_session, caption)
+      VALUES (?, ?, ?, ?, ?)
     `)
     
-    stmt.run(id, originalUrl, 'pending', userSession)
+    stmt.run(id, originalUrl, 'pending', userSession, caption)
     
     return this.getPhoto(id)!
   }
@@ -38,7 +39,9 @@ export class PhotoService {
       created_at: row.created_at,
       approved_at: row.approved_at,
       user_session: row.user_session,
-      processing_error: row.processing_error
+      processing_error: row.processing_error,
+      caption: row.caption,
+      ai_description: row.ai_description
     }
   }
 
@@ -67,7 +70,9 @@ export class PhotoService {
       created_at: row.created_at,
       approved_at: row.approved_at,
       user_session: row.user_session,
-      processing_error: row.processing_error
+      processing_error: row.processing_error,
+      caption: row.caption,
+      ai_description: row.ai_description
     }))
   }
 

@@ -12,10 +12,12 @@
     "test:ci": "jest --ci --coverage"
   },
   "dependencies": {
+    "@types/mime-types": "^3.0.1",
     "@types/multer": "^2.0.0",
     "@types/uuid": "^10.0.0",
     "better-sqlite3": "^12.2.0",
     "lucide-react": "^0.542.0",
+    "mime-types": "^3.0.1",
     "multer": "^2.0.2",
     "next": "15.5.2",
     "openai": "^5.16.0",

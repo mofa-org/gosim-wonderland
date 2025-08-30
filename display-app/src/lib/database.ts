@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3'
 import path from 'path'
 
-const dbPath = path.join(process.cwd(), 'data', 'wonderland.db')
+const dbPath = path.join(process.cwd(), '..', 'photo-app', 'data', 'wonderland.db')
 let db: Database.Database | null = null
 
 export const getDatabase = () => {

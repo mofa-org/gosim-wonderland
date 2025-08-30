@@ -82,7 +82,7 @@ export class PhotoService {
   }
 
   rejectPhoto(id: string): boolean {
-    const stmt = this.db.prepare('UPDATE photos SET status = "rejected" WHERE id = ?')
+    const stmt = this.db.prepare("UPDATE photos SET status = 'rejected' WHERE id = ?")
     const result = stmt.run(id)
     return result.changes > 0
   }
@@ -97,7 +97,7 @@ export class PhotoService {
     `)
     
     const rows = stmt.all() as { status: string, count: number }[]
-    const stats = { pending: 0, approved: 0, rejected: 0 }
+    const stats = { pending: 0, completed: 0, failed: 0, approved: 0, rejected: 0 }
     
     rows.forEach(row => {
       stats[row.status as keyof typeof stats] = row.count

@@ -1,11 +1,19 @@
 import Database from 'better-sqlite3'
 import path from 'path'
 
-const dbPath = path.join(process.cwd(), 'data', 'wonderland.db')
+const dbPath = path.join(process.cwd(), '..', 'photo-app', 'data', 'wonderland.db')
 let db: Database.Database | null = null
 
 export const getDatabase = () => {
   if (!db) {
+    // 确保data目录存在
+    const dataDir = path.dirname(dbPath)
+    try {
+      require('fs').mkdirSync(dataDir, { recursive: true })
+    } catch (e) {
+      // 目录可能已存在
+    }
+    
     db = new Database(dbPath)
     
     // 创建photos表
@@ -18,9 +26,24 @@ export const getDatabase = () => {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         approved_at DATETIME,
         user_session TEXT,
-        processing_error TEXT
+        processing_error TEXT,
+        caption TEXT,
+        ai_description TEXT
       )
     `)
+    
+    // 添加新字段（如果表已存在）
+    try {
+      db.exec('ALTER TABLE photos ADD COLUMN caption TEXT')
+    } catch (e) {
+      // 字段已存在，忽略错误
+    }
+    
+    try {
+      db.exec('ALTER TABLE photos ADD COLUMN ai_description TEXT')
+    } catch (e) {
+      // 字段已存在，忽略错误
+    }
     
     // 创建索引
     db.exec('CREATE INDEX IF NOT EXISTS idx_photos_status ON photos(status)')
