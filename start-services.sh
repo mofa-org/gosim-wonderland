@@ -8,6 +8,46 @@
 
 echo "🚀 启动 GOSIM Wonderland 服务..."
 
+# 检查并安装系统依赖
+install_system_deps() {
+    echo "🔧 检查系统依赖..."
+    
+    # 检查是否为Ubuntu/Debian系统
+    if command -v apt-get >/dev/null 2>&1; then
+        echo "🐧 检测到Ubuntu/Debian系统，安装依赖..."
+        
+        # 更新包列表
+        sudo apt-get update
+        
+        # 安装Node.js和npm
+        if ! command -v node >/dev/null 2>&1; then
+            echo "📦 安装Node.js..."
+            curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+            sudo apt-get install -y nodejs
+        fi
+        
+        # 安装Python3和pip
+        if ! command -v python3 >/dev/null 2>&1; then
+            echo "🐍 安装Python3..."
+            sudo apt-get install -y python3 python3-pip python3-dev
+        fi
+        
+        if ! command -v pip3 >/dev/null 2>&1; then
+            echo "📦 安装pip3..."
+            sudo apt-get install -y python3-pip
+        fi
+        
+    elif command -v brew >/dev/null 2>&1; then
+        echo "🍺 检测到macOS系统..."
+        # macOS通常已有这些依赖
+    else
+        echo "⚠️ 未检测到包管理器，请手动安装Node.js和Python3"
+    fi
+}
+
+# 安装系统依赖
+install_system_deps
+
 # 检查Node.js依赖是否已安装
 check_node_deps() {
     if [ ! -d "$1/node_modules" ]; then
