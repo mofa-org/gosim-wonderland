@@ -61,9 +61,9 @@ check_node_deps() {
 check_python_deps() {
     echo "🐍 安装Python依赖..."
     cd ai-api-server
-    pip3 install --user -r requirements.txt
+    pip3 install --break-system-packages -r requirements.txt
     echo "🔧 确保uvicorn可用..."
-    pip3 install --user uvicorn[standard]
+    pip3 install --break-system-packages uvicorn[standard]
     cd ..
 }
 
