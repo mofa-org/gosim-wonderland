@@ -19,9 +19,11 @@ check_node_deps() {
 
 # 检查Python依赖是否已安装
 check_python_deps() {
-    echo "🐍 检查Python依赖..."
+    echo "🐍 安装Python依赖..."
     cd ai-api-server
-    pip3 install -r requirements.txt > /dev/null 2>&1
+    pip3 install --user -r requirements.txt
+    echo "🔧 确保uvicorn可用..."
+    pip3 install --user uvicorn[standard]
     cd ..
 }
 
@@ -35,7 +37,7 @@ echo "✅ 依赖检查完成"
 
 # 启动服务
 echo "🤖 启动 ai-api-server (端口 8000)..."
-(cd ai-api-server && source venv/bin/activate && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000) &
+(cd ai-api-server && python3 -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000) &
 AI_PID=$!
 
 echo "🎯 启动 photo-app (端口 80)..."
