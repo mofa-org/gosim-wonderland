@@ -18,7 +18,7 @@ module.exports = {
       cwd: './photo-app',
       env: {
         NODE_ENV: 'production',
-        PORT: 3004
+        PORT: 8080
       }
     },
     {
