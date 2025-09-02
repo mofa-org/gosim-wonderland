@@ -76,46 +76,45 @@ export default function DisplayApp() {
 
   return (
     <div className="min-h-screen bg-[#FFC837] flex flex-col">
-      {/* Header */}
-      <header className="bg-[#6DCACE] border-b-4 border-black text-black py-3 px-6">
+      {/* Header - 压缩版 */}
+      <header className="bg-[#6DCACE] border-b-2 border-black text-black py-1 px-4">
         <div className="flex items-center justify-between">
-          {/* 左侧标题 */}
+          {/* 左侧标题 - 缩小 */}
           <div className="text-left">
-            <h1 className="text-2xl lg:text-3xl xl:text-4xl font-bold mb-1">GOSIM Wonderland</h1>
-            <p className="text-base lg:text-lg xl:text-xl font-bold">梦幻卡通展示墙</p>
+            <h1 className="text-lg font-bold">GOSIM Wonderland</h1>
           </div>
           
-          {/* 右侧二维码 */}
-          <div className="bg-white border-4 border-black p-2">
+          {/* 右侧二维码 - 缩小 */}
+          <div className="bg-white border-2 border-black p-1">
             <Image
               src="/qr-code.png"
               alt="扫描二维码拍照"
-              width={80}
-              height={80}
-              className="w-20 h-20 object-contain"
+              width={40}
+              height={40}
+              className="w-10 h-10 object-contain"
             />
           </div>
         </div>
         
-        {/* 状态指示 */}
-        <div className="flex items-center justify-center mt-4 space-x-6">
-          <div className={`flex items-center space-x-3 px-4 py-3 border-4 border-black text-base lg:text-lg font-bold ${
+        {/* 状态指示 - 缩小并简化 */}
+        <div className="flex items-center justify-center mt-1 space-x-3">
+          <div className={`flex items-center space-x-1 px-2 py-1 border-2 border-black text-xs font-bold ${
             isConnected ? 'bg-[#6CC8CC] text-black' : 'bg-[#FC6A59] text-black'
           }`}>
-            <div className={`w-4 h-4 lg:w-5 lg:h-5 ${
+            <div className={`w-2 h-2 ${
               isConnected ? 'bg-black' : 'bg-black'
             }`}></div>
-            <span>{isConnected ? '实时连接' : '连接断开'}</span>
+            <span>{isConnected ? '连接' : '断开'}</span>
           </div>
           
-          <div className="bg-white border-4 border-black px-4 py-3 text-base lg:text-lg font-bold text-black">
-            {photos.length} 张照片
+          <div className="bg-white border-2 border-black px-2 py-1 text-xs font-bold text-black">
+            {photos.length} 张
           </div>
         </div>
       </header>
 
       {/* Main Display */}
-      <main className="flex-1 flex items-center justify-center p-8">
+      <main className="flex-1 flex items-center justify-center p-2">
         {error && (
           <div className="text-center">
             <div className="bg-[#FD543F] border-4 border-black text-black p-6">
@@ -157,11 +156,11 @@ export default function DisplayApp() {
 
         {!error && photos.length > 0 && currentPhoto && (
           <div className="w-full h-full flex items-center justify-center">
-            <div className="w-full max-w-7xl h-full flex flex-col lg:flex-row gap-8">
-              {/* 主照片显示区 - 横屏时占用更多空间 */}
+            <div className="w-full h-full flex flex-col lg:flex-row gap-2">
+              {/* 主照片显示区 - 超大显示 */}
               <div className="flex-1 flex items-center justify-center">
-                <div className="bg-white border-4 border-black max-h-[70vh] w-full">
-                  <div className="aspect-square lg:aspect-[4/3] xl:aspect-[16/10] relative bg-white">
+                <div className="bg-white border-4 border-black w-full h-[85vh]">
+                  <div className="w-full h-full relative bg-white">
                     <Image
                       src={currentPhoto.cartoon_url || currentPhoto.original_url}
                       alt="卡通头像"
@@ -173,48 +172,35 @@ export default function DisplayApp() {
                 </div>
               </div>
 
-              {/* 侧边信息栏 - 横屏时显示在右侧 */}
-              <div className="lg:w-80 xl:w-96 flex flex-col justify-center space-y-6">
-                {/* 照片信息 */}
-                <div className="bg-[#6DCACE] border-4 border-black p-6">
-                  <h3 className="text-2xl font-bold text-black mb-4 text-center">照片信息</h3>
-                  <div className="space-y-3">
-                    <div className="bg-white border-4 border-black p-3 text-center">
-                      <span className="text-lg font-bold text-black">
-                        {currentIndex + 1} / {photos.length}
-                      </span>
-                    </div>
-                    <div className="bg-[#FFC837] border-4 border-black p-3 text-center">
-                      <span className="text-sm font-bold text-black">
-                        {new Date(currentPhoto.created_at).toLocaleString('zh-CN')}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 进度条 */}
-                <div className="bg-white border-4 border-black h-8">
-                  <div 
-                    className="bg-[#FC6A59] h-full transition-all duration-100 flex items-center justify-end pr-2"
-                    style={{
-                      width: `${((currentIndex + 1) / photos.length) * 100}%`
-                    }}
-                  >
-                    <span className="text-black text-xs font-bold">
-                      {Math.round(((currentIndex + 1) / photos.length) * 100)}%
+              {/* 侧边信息栏 - 极简版 */}
+              <div className="lg:w-48 flex flex-col justify-center space-y-2">
+                {/* 照片计数 - 简化 */}
+                <div className="bg-[#6DCACE] border-2 border-black p-2">
+                  <div className="bg-white border-2 border-black p-1 text-center">
+                    <span className="text-sm font-bold text-black">
+                      {currentIndex + 1} / {photos.length}
                     </span>
                   </div>
                 </div>
 
-                {/* 缩略图预览 */}
-                <div className="bg-white border-4 border-black p-4">
-                  <h4 className="text-lg font-bold text-black mb-3 text-center">预览</h4>
-                  <div className="grid grid-cols-3 gap-2">
-                    {photos.slice(0, 9).map((photo, index) => (
+                {/* 进度条 - 缩小 */}
+                <div className="bg-white border-2 border-black h-4">
+                  <div 
+                    className="bg-[#FC6A59] h-full transition-all duration-100"
+                    style={{
+                      width: `${((currentIndex + 1) / photos.length) * 100}%`
+                    }}
+                  ></div>
+                </div>
+
+                {/* 缩略图预览 - 超小版 */}
+                <div className="bg-white border-2 border-black p-1">
+                  <div className="grid grid-cols-2 gap-1">
+                    {photos.slice(0, 4).map((photo, index) => (
                       <div 
                         key={photo.id}
-                        className={`aspect-square relative border-2 ${
-                          index === currentIndex ? 'border-[#FC6A59]' : 'border-black'
+                        className={`aspect-square relative border ${
+                          index === currentIndex ? 'border-[#FC6A59] border-2' : 'border-black'
                         }`}
                       >
                         <Image
@@ -227,33 +213,16 @@ export default function DisplayApp() {
                     ))}
                   </div>
                 </div>
-
-                {/* 二维码区域 */}
-                {/* <div className="bg-[#6DCACE] border-4 border-black p-4">
-                  <h4 className="text-lg font-bold text-black mb-3 text-center">扫码拍照</h4>
-                  <div className="w-32 h-32 mx-auto bg-white border-4 border-black p-2">
-                    <Image
-                      src="/qr-code.png"
-                      alt="扫描二维码拍照"
-                      width={112}
-                      height={112}
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
-                  <p className="text-xs font-bold text-black text-center mt-2">
-                    扫码生成卡通头像
-                  </p>
-                </div> */}
               </div>
             </div>
           </div>
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="bg-black border-t-4 border-black text-[#FFC837] py-3 px-8 text-center">
-        <p className="text-sm lg:text-base xl:text-lg font-bold">
-          扫描二维码拍照，生成专属GOSIM风格卡通头像
+      {/* Footer - 极简版 */}
+      <footer className="bg-black border-t-2 border-black text-[#FFC837] py-1 px-4 text-center">
+        <p className="text-xs font-bold">
+          扫码拍照，生成GOSIM卡通头像
         </p>
       </footer>
     </div>

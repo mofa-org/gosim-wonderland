@@ -6,6 +6,37 @@ import requests
 import pathlib
 import json
 
+PICGO_API_KEY = "chv_SRYm7_d0bb9dda7dea5abe1451c8c5a1b38531bff31f3702fc8de3555f93fe95b9fb801fdebc7a509633f1f6a1b41b320cba398ff80ced0c2b545ff107ce7bc519273d"
+
+def upload_to_picgo(image_url: str) -> str:
+    """将图片上传到PicGo图床，返回公网可访问的URL"""
+    try:
+        # 下载原图片
+        image_response = requests.get(image_url)
+        image_response.raise_for_status()
+        
+        # 上传到图床
+        files = {'source': ('image.jpg', image_response.content, 'image/jpeg')}
+        headers = {'X-API-Key': PICGO_API_KEY}
+        
+        upload_response = requests.post(
+            'https://www.picgo.net/api/1/upload',
+            headers=headers,
+            files=files
+        )
+        upload_response.raise_for_status()
+        
+        result = upload_response.json()
+        if result.get('status_code') == 200 and result.get('image', {}).get('url'):
+            return result['image']['url']
+        else:
+            print(f"图床上传失败: {result}")
+            return image_url
+            
+    except Exception as e:
+        print(f"图床上传错误: {e}")
+        return image_url
+
 def call_tongyi_wanxiang(prompt: str, base_image_url: str = None, n: int = 1, api_key: str = None) -> ImageSynthesisResponse:
     """
     Calls the Tongyi Wanxiang image synthesis API.
@@ -69,7 +100,7 @@ def call_tongyi_qianwen_image_edit(prompt: str, base_image_url: str = None, n: i
     if api_key is None:
         api_key = os.getenv("DASHSCOPE_API_KEY")
     
-    # Mock mode: if no API key or placeholder key
+    # Mock mode: if no API key or placeholder key  
     if api_key is None or api_key == "your_dashscope_api_key_here":
         import random
         import uuid
@@ -101,6 +132,13 @@ def call_tongyi_qianwen_image_edit(prompt: str, base_image_url: str = None, n: i
                 })()]
             })()
         })()
+
+    # 如果是本地URL，先上传到图床获取公网URL
+    if base_image_url and (base_image_url.startswith('http://localhost:') or base_image_url.startswith('http://127.0.0.1:')):
+        print(f"本地图片URL detected: {base_image_url}, 上传到图床...")
+        public_url = upload_to_picgo(base_image_url)
+        print(f"图床URL: {public_url}")
+        base_image_url = public_url
 
     messages = [
         {
