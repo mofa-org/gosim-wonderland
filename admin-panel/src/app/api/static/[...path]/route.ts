@@ -5,10 +5,11 @@ import { lookup } from 'mime-types'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
   try {
-    const filePath = params.path.join('/')
+    const resolvedParams = await params
+    const filePath = resolvedParams.path.join('/')
     const fullPath = path.join(process.cwd(), '..', filePath)
     
     // 安全检查：防止路径遍历攻击
@@ -25,7 +26,7 @@ export async function GET(
     // 获取MIME类型
     const mimeType = lookup(normalizedPath) || 'application/octet-stream'
     
-    return new NextResponse(fileBuffer, {
+    return new NextResponse(new Uint8Array(fileBuffer), {
       headers: {
         'Content-Type': mimeType,
         'Cache-Control': 'public, max-age=31536000',

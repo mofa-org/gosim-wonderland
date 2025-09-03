@@ -10,7 +10,11 @@ export const compressImage = (file: File, maxWidth: number = 800, quality: numbe
       canvas.height = img.height * ratio
       
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-      canvas.toBlob(resolve, 'image/jpeg', quality)
+      canvas.toBlob((blob) => {
+        if (blob) {
+          resolve(blob)
+        }
+      }, 'image/jpeg', quality)
     }
     
     img.src = URL.createObjectURL(file)

@@ -7,12 +7,6 @@ export class PhotoService {
 
   createPhoto(originalUrl: string, userSession?: string): Photo {
     const id = uuidv4()
-    const photo: Omit<Photo, 'created_at'> = {
-      id,
-      original_url: originalUrl,
-      status: 'pending',
-      user_session: userSession
-    }
 
     const stmt = this.db.prepare(`
       INSERT INTO photos (id, original_url, status, user_session)
@@ -26,19 +20,19 @@ export class PhotoService {
 
   getPhoto(id: string): Photo | null {
     const stmt = this.db.prepare('SELECT * FROM photos WHERE id = ?')
-    const row = stmt.get(id) as any
+    const row = stmt.get(id) as Record<string, unknown>
     
     if (!row) return null
     
     return {
-      id: row.id,
-      original_url: row.original_url,
-      cartoon_url: row.cartoon_url,
+      id: row.id as string,
+      original_url: row.original_url as string,
+      cartoon_url: row.cartoon_url as string,
       status: row.status as PhotoStatus,
-      created_at: row.created_at,
-      approved_at: row.approved_at,
-      user_session: row.user_session,
-      processing_error: row.processing_error
+      created_at: row.created_at as string,
+      approved_at: row.approved_at as string,
+      user_session: row.user_session as string,
+      processing_error: row.processing_error as string
     }
   }
 
@@ -57,17 +51,17 @@ export class PhotoService {
     if (limit) query += ` LIMIT ${limit}`
     
     const stmt = this.db.prepare(query)
-    const rows = stmt.all(status) as any[]
+    const rows = stmt.all(status) as Record<string, unknown>[]
     
     return rows.map(row => ({
-      id: row.id,
-      original_url: row.original_url,
-      cartoon_url: row.cartoon_url,
+      id: row.id as string,
+      original_url: row.original_url as string,
+      cartoon_url: row.cartoon_url as string,
       status: row.status as PhotoStatus,
-      created_at: row.created_at,
-      approved_at: row.approved_at,
-      user_session: row.user_session,
-      processing_error: row.processing_error
+      created_at: row.created_at as string,
+      approved_at: row.approved_at as string,
+      user_session: row.user_session as string,
+      processing_error: row.processing_error as string
     }))
   }
 

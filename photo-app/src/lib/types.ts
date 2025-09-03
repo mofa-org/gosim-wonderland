@@ -7,6 +7,8 @@ export interface Photo {
   approved_at?: string
   user_session?: string
   processing_error?: string
+  caption?: string
+  ai_description?: string
 }
 
 export interface UploadResponse {

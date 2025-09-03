@@ -25,16 +25,16 @@ export class PhotoService {
     if (!row) return null
     
     return {
-      id: row.id,
-      original_url: row.original_url,
-      cartoon_url: row.cartoon_url,
+      id: row.id as string,
+      original_url: row.original_url as string,
+      cartoon_url: row.cartoon_url as string,
       status: row.status as PhotoStatus,
-      created_at: row.created_at,
-      approved_at: row.approved_at,
-      user_session: row.user_session,
-      processing_error: row.processing_error,
-      caption: row.caption,
-      ai_description: row.ai_description
+      created_at: row.created_at as string,
+      approved_at: row.approved_at as string,
+      user_session: row.user_session as string,
+      processing_error: row.processing_error as string,
+      caption: row.caption as string,
+      ai_description: row.ai_description as string
     }
   }
 
@@ -56,16 +56,16 @@ export class PhotoService {
     const rows = stmt.all(status) as Record<string, unknown>[]
     
     return rows.map(row => ({
-      id: row.id,
-      original_url: row.original_url,
-      cartoon_url: row.cartoon_url,
+      id: row.id as string,
+      original_url: row.original_url as string,
+      cartoon_url: row.cartoon_url as string,
       status: row.status as PhotoStatus,
-      created_at: row.created_at,
-      approved_at: row.approved_at,
-      user_session: row.user_session,
-      processing_error: row.processing_error,
-      caption: row.caption,
-      ai_description: row.ai_description
+      created_at: row.created_at as string,
+      approved_at: row.approved_at as string,
+      user_session: row.user_session as string,
+      processing_error: row.processing_error as string,
+      caption: row.caption as string,
+      ai_description: row.ai_description as string
     }))
   }
 
