@@ -15,4 +15,12 @@ echo "🛑 检查并停止现有服务..."
 pkill -f "uvicorn.*8000" || true
 
 echo "🚀 启动AI API服务器 (端口 8000)..."
-/opt/homebrew/bin/python3.11 -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+# 检测Python路径
+if command -v python3.11 >/dev/null 2>&1; then
+    python3.11 -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+elif command -v python3 >/dev/null 2>&1; then
+    python3 -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+else
+    echo "❌ 找不到Python，请先安装Python3"
+    exit 1
+fi
