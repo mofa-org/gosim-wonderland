@@ -6,7 +6,7 @@ import requests
 import pathlib
 import json
 
-PICGO_API_KEY = "chv_SRYm7_d0bb9dda7dea5abe1451c8c5a1b38531bff31f3702fc8de3555f93fe95b9fb801fdebc7a509633f1f6a1b41b320cba398ff80ced0c2b545ff107ce7bc519273d"
+PICGO_API_KEY = os.getenv("PICGO_API_KEY", "chv_SRYm7_d0bb9dda7dea5abe1451c8c5a1b38531bff31f3702fc8de3555f93fe95b9fb801fdebc7a509633f1f6a1b41b320cba398ff80ced0c2b545ff107ce7bc519273d")
 
 def upload_to_picgo(image_url: str) -> str:
     """将图片上传到PicGo图床，返回公网可访问的URL"""
