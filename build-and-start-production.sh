@@ -20,9 +20,9 @@ pkill -f "uvicorn.*8000" || true
 sleep 3
 
 echo "📦 安装依赖..."
-cd photo-app && npm install --production && cd ..
-cd display-app && npm install --production && cd ..
-cd admin-panel && npm install --production && cd ..
+cd photo-app && npm install && cd ..
+cd display-app && npm install && cd ..
+cd admin-panel && npm install && cd ..
 cd ai-api-server && pip3 install -r requirements.txt && cd ..
 
 echo "🔨 构建生产版本..."
@@ -31,8 +31,8 @@ cd display-app && npm run build && cd ..
 cd admin-panel && npm run build && cd ..
 
 echo "📁 创建必要目录..."
-mkdir -p original-photos ai-photos data
-chmod 755 original-photos ai-photos data
+mkdir -p original-photos ai-photos data logs
+chmod 755 original-photos ai-photos data logs
 
 echo "🚀 启动所有服务..."
 
@@ -49,24 +49,24 @@ cd ..
 # 等待AI服务启动
 sleep 3
 
-# 启动Next.js应用
+# 启动Next.js应用 - 绑定到所有IP
 echo "📱 启动Photo App (端口 8080)..."
 cd photo-app
-PORT=8080 nohup npm start > ../logs/photo-app.log 2>&1 &
+PORT=8080 HOSTNAME=0.0.0.0 nohup npm start > ../logs/photo-app.log 2>&1 &
 cd ..
 
 echo "📺 启动Display App (端口 8081)..."
-cd display-app
-PORT=8081 nohup npm start > ../logs/display-app.log 2>&1 &
+cd display-app  
+PORT=8081 HOSTNAME=0.0.0.0 nohup npm start > ../logs/display-app.log 2>&1 &
 cd ..
 
 echo "⚙️ 启动Admin Panel (端口 8082)..."
 cd admin-panel
-PORT=8082 nohup npm start > ../logs/admin-panel.log 2>&1 &
+PORT=8082 HOSTNAME=0.0.0.0 nohup npm start > ../logs/admin-panel.log 2>&1 &
 cd ..
 
-# 创建日志目录
-mkdir -p logs
+# 移动日志目录创建到前面
+# (已经在前面创建了)
 
 echo ""
 echo "🎉 所有服务已启动!"
