@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --port 8080",
-    "build": "next build --turbopack --no-lint",
+    "build": "SKIP_ENV_VALIDATION=true next build --turbopack",
     "start": "next start",
     "lint": "eslint",
     "test": "jest",

@@ -21,8 +21,9 @@ describe('/api/upload', () => {
     MockedPhotoService.mockImplementation(() => mockPhotoService)
     
     // Mock fs/promises
-    require('fs/promises').writeFile = jest.fn().mockResolvedValue(undefined)
-    require('fs/promises').mkdir = jest.fn().mockResolvedValue(undefined)
+    const fs = require('fs/promises')
+    fs.writeFile = jest.fn().mockResolvedValue(undefined)
+    fs.mkdir = jest.fn().mockResolvedValue(undefined)
     
     jest.clearAllMocks()
   })

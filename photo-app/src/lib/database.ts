@@ -1,6 +1,5 @@
 import Database from 'better-sqlite3'
 import path from 'path'
-import { mkdir } from 'fs/promises'
 
 const dbPath = path.join(process.cwd(), 'data', 'wonderland.db')
 let db: Database.Database | null = null
@@ -10,8 +9,9 @@ export const getDatabase = () => {
     // 确保data目录存在
     const dataDir = path.dirname(dbPath)
     try {
-      require('fs').mkdirSync(dataDir, { recursive: true })
-    } catch (e) {
+      const fs = require('fs')
+      fs.mkdirSync(dataDir, { recursive: true })
+    } catch {
       // 目录可能已存在
     }
     
@@ -36,13 +36,13 @@ export const getDatabase = () => {
     // 添加新字段（如果表已存在）
     try {
       db.exec('ALTER TABLE photos ADD COLUMN caption TEXT')
-    } catch (e) {
+    } catch {
       // 字段已存在，忽略错误
     }
     
     try {
       db.exec('ALTER TABLE photos ADD COLUMN ai_description TEXT')
-    } catch (e) {
+    } catch {
       // 字段已存在，忽略错误
     }
     

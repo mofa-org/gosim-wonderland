@@ -7,13 +7,6 @@ export class PhotoService {
 
   createPhoto(originalUrl: string, userSession?: string, caption?: string): Photo {
     const id = uuidv4()
-    const photo: Omit<Photo, 'created_at'> = {
-      id,
-      original_url: originalUrl,
-      status: 'pending',
-      user_session: userSession,
-      caption: caption
-    }
 
     const stmt = this.db.prepare(`
       INSERT INTO photos (id, original_url, status, user_session, caption)
@@ -27,7 +20,7 @@ export class PhotoService {
 
   getPhoto(id: string): Photo | null {
     const stmt = this.db.prepare('SELECT * FROM photos WHERE id = ?')
-    const row = stmt.get(id) as any
+    const row = stmt.get(id) as Record<string, unknown>
     
     if (!row) return null
     
@@ -60,7 +53,7 @@ export class PhotoService {
     if (limit) query += ` LIMIT ${limit}`
     
     const stmt = this.db.prepare(query)
-    const rows = stmt.all(status) as any[]
+    const rows = stmt.all(status) as Record<string, unknown>[]
     
     return rows.map(row => ({
       id: row.id,
