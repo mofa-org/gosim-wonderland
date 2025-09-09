@@ -17,17 +17,17 @@ def upload_to_picgo(image_url: str) -> str:
     try:
         image_response = requests.get(image_url, timeout=10)
         image_response.raise_for_status()
-        
+
         files = {'source': ('image.jpg', image_response.content, 'image/jpeg')}
         headers = {'X-API-Key': PICGO_API_KEY}
-        
+
         upload_response = requests.post(
             'https://www.picgo.net/api/1/upload',
             headers=headers,
             files=files,
             timeout=30
         )
-        
+
         if upload_response.status_code == 200:
             result = upload_response.json()
             return result['image']['url']
@@ -42,17 +42,17 @@ def save_image_from_url(url: str) -> str:
     """从URL下载图片并保存到本地"""
     try:
         os.makedirs(AI_PHOTOS_DIR, exist_ok=True)
-        
+
         response = requests.get(url, timeout=30)
         response.raise_for_status()
-        
+
         unique_id = uuid.uuid4()
         file_name = f"cartoon_{unique_id}.png"
         file_path = os.path.join(AI_PHOTOS_DIR, file_name)
-        
+
         with open(file_path, "wb") as f:
             f.write(response.content)
-            
+
         return f"/ai-photos/{file_name}"
     except Exception as e:
         print(f"保存图片失败: {e}")
@@ -69,29 +69,29 @@ def generate_image(request: dict):
         model_name = request.get("model_name", "qwen-image-edit")
         prompt = request.get("prompt", "生成可爱的卡通头像")
         base_image_url = request.get("base_image_url")
-        
+
         if not base_image_url:
             raise HTTPException(status_code=400, detail="缺少base_image_url参数")
-        
+
         # 获取API key
         api_key = os.getenv("DASHSCOPE_API_KEY")
         if not api_key or api_key == "your_dashscope_api_key_here":
             # Mock模式：生成随机彩色图片
             import random
             from PIL import Image
-            
+
             os.makedirs(AI_PHOTOS_DIR, exist_ok=True)
             colors = ["#FC6A59", "#FFC63E", "#FD543F", "#6CC8CC"]
             mock_color = random.choice(colors)
-            
+
             image = Image.new('RGB', (512, 512), mock_color)
             unique_id = uuid.uuid4()
             file_name = f"cartoon_{unique_id}.png"
             file_path = os.path.join(AI_PHOTOS_DIR, file_name)
             image.save(file_path)
-            
+
             return {"status": "success", "image_paths": [f"/ai-photos/{file_name}"]}
-        
+
         # 如果是本地URL，转换为公网可访问URL
         if base_image_url.startswith(('http://localhost:', 'http://127.0.0.1:')):
             print(f"本地图片URL: {base_image_url}")
@@ -101,14 +101,14 @@ def generate_image(request: dict):
             base_image_url = public_url
                     # files = {'source': (unique_filename, f.read(), 'image/jpeg')}
                     # headers = {'X-API-Key': PICGO_API_KEY}
-                    
+
                     # upload_response = requests.post(
                     #     'https://www.picgo.net/api/1/upload',
                     #     headers=headers,
                     #     files=files,
                     #     timeout=30
                     # )
-                    
+
                     # if upload_response.status_code == 200:
                     #     result = upload_response.json()
                     #     base_image_url = result['image']['url']
@@ -121,18 +121,18 @@ def generate_image(request: dict):
             # except Exception as e:
             #     print(f"本地文件上传错误: {e}")
             #     raise HTTPException(status_code=500, detail=f"文件上传失败: {str(e)}")
-        
+
         # 调用通义万相API
         messages = [
             {
                 "role": "user",
                 "content": [
                     {"image": base_image_url},
-                    {"text": f"用户需求：{prompt}。请将参考图中的主角按照用户需求重新绘制，采用GOSIM卡通风格，保持人物特征，线条清晰，颜色鲜明。"}
+                    {"text": f"用户需求：{prompt}。请将参考图中的主角按照用户需求重新绘制，采用卡通风格，保持人物特征，线条清晰，颜色鲜明,要有GOSIM大会的元素"}
                 ]
             }
         ]
-        
+
         response = MultiModalConversation.call(
             api_key=api_key,
             model="qwen-image-edit",
@@ -141,12 +141,12 @@ def generate_image(request: dict):
             stream=False,
             watermark=True
         )
-        
+
         if response.status_code == 200:
             # 解析响应并下载图片
             response_data = dict(response)
             choices = response_data['output']['choices']
-            
+
             image_paths = []
             for choice in choices:
                 for content_item in choice['message']['content']:
@@ -155,14 +155,14 @@ def generate_image(request: dict):
                         saved_path = save_image_from_url(content_item['image'])
                         image_paths.append(saved_path)
                         print(f"保存图片: {saved_path}")
-            
+
             return {"status": "success", "image_paths": image_paths}
         else:
             raise HTTPException(
-                status_code=500, 
+                status_code=500,
                 detail=f"AI生成失败: {response.message}"
             )
-            
+
     except Exception as e:
         print(f"生成图片错误: {e}")
         raise HTTPException(status_code=500, detail=f"生成失败: {str(e)}")
