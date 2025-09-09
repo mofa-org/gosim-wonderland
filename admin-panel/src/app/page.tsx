@@ -25,13 +25,49 @@ export default function AdminPanel() {
   const [currentTab, setCurrentTab] = useState<PhotoStatus>("completed");
   const [loading, setLoading] = useState(false);
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
+  
+  // 登录状态管理
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [password, setPassword] = useState("");
+  const [loginError, setLoginError] = useState("");
+
+  // 登录验证函数
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password === "mofagosim") {
+      setIsAuthenticated(true);
+      setLoginError("");
+      // 登录成功后存储到localStorage（可选）
+      localStorage.setItem("admin_authenticated", "true");
+    } else {
+      setLoginError("密码错误，请重试");
+      setPassword("");
+    }
+  };
+
+  // 退出登录
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setPassword("");
+    localStorage.removeItem("admin_authenticated");
+  };
+
+  // 检查localStorage中的登录状态（可选）
+  useEffect(() => {
+    const isLoggedIn = localStorage.getItem("admin_authenticated");
+    if (isLoggedIn === "true") {
+      setIsAuthenticated(true);
+    }
+  }, []);
 
   useEffect(() => {
-    loadPhotos();
-    // 定期刷新
-    const interval = setInterval(loadPhotos, 5000);
-    return () => clearInterval(interval);
-  }, [currentTab]);
+    if (isAuthenticated) {
+      loadPhotos();
+      // 定期刷新
+      const interval = setInterval(loadPhotos, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [currentTab, isAuthenticated]);
 
   const loadPhotos = async () => {
     if (loading) return;
@@ -59,6 +95,10 @@ export default function AdminPanel() {
   const handleApprove = async (photoId: string) => {
     if (processingIds.has(photoId)) return;
 
+    // 获取被通过照片的当前状态
+    const photoToApprove = photos.find(p => p.id === photoId);
+    if (!photoToApprove) return;
+
     setProcessingIds((prev) => new Set(prev).add(photoId));
 
     try {
@@ -71,11 +111,27 @@ export default function AdminPanel() {
       if (result.success) {
         // 从当前列表中移除
         setPhotos((prev) => prev.filter((photo) => photo.id !== photoId));
-        setStats((prev) => ({
-          ...prev,
-          pending: prev.pending - 1,
-          approved: prev.approved + 1,
-        }));
+        
+        // 根据原始状态正确更新统计
+        setStats((prev) => {
+          const newStats = { ...prev };
+          
+          // 减少原状态的计数
+          if (photoToApprove.status === 'pending') {
+            newStats.pending = prev.pending - 1;
+          } else if (photoToApprove.status === 'completed') {
+            newStats.completed = prev.completed - 1;
+          } else if (photoToApprove.status === 'failed') {
+            newStats.failed = prev.failed - 1;
+          } else if (photoToApprove.status === 'rejected') {
+            newStats.rejected = prev.rejected - 1;
+          }
+          
+          // 增加approved计数
+          newStats.approved = prev.approved + 1;
+          
+          return newStats;
+        });
       } else {
         alert("操作失败: " + result.error);
       }
@@ -93,6 +149,10 @@ export default function AdminPanel() {
   const handleReject = async (photoId: string) => {
     if (processingIds.has(photoId)) return;
 
+    // 获取被删除照片的当前状态
+    const photoToDelete = photos.find(p => p.id === photoId);
+    if (!photoToDelete) return;
+
     setProcessingIds((prev) => new Set(prev).add(photoId));
 
     try {
@@ -105,11 +165,27 @@ export default function AdminPanel() {
       if (result.success) {
         // 从当前列表中移除
         setPhotos((prev) => prev.filter((photo) => photo.id !== photoId));
-        setStats((prev) => ({
-          ...prev,
-          pending: prev.pending - 1,
-          rejected: prev.rejected + 1,
-        }));
+        
+        // 根据原始状态正确更新统计
+        setStats((prev) => {
+          const newStats = { ...prev };
+          
+          // 减少原状态的计数
+          if (photoToDelete.status === 'pending') {
+            newStats.pending = prev.pending - 1;
+          } else if (photoToDelete.status === 'completed') {
+            newStats.completed = prev.completed - 1;
+          } else if (photoToDelete.status === 'failed') {
+            newStats.failed = prev.failed - 1;
+          } else if (photoToDelete.status === 'approved') {
+            newStats.approved = prev.approved - 1;
+          }
+          
+          // 增加rejected计数
+          newStats.rejected = prev.rejected + 1;
+          
+          return newStats;
+        });
       } else {
         alert("操作失败: " + result.error);
       }
@@ -153,6 +229,54 @@ export default function AdminPanel() {
         return "已拒绝";
     }
   };
+
+  // 如果未登录，显示登录界面
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-[#FFC837] flex items-center justify-center">
+        <div className="bg-white border-4 border-black p-8 max-w-md w-full mx-4">
+          <div className="text-center mb-6">
+            <h1 className="text-2xl font-bold text-black mb-2">
+              GOSIM Wonderland 管理后台
+            </h1>
+            <p className="text-black font-bold">请输入管理密码</p>
+          </div>
+
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="请输入密码"
+                className="w-full px-4 py-3 border-4 border-black font-bold text-black placeholder-gray-500 focus:outline-none focus:bg-[#FFC837]"
+                autoFocus
+              />
+            </div>
+
+            {loginError && (
+              <div className="bg-[#FD543F] border-4 border-black p-3">
+                <p className="text-black font-bold text-center">{loginError}</p>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              className="w-full bg-[#6DCACE] text-black py-3 px-4 border-4 border-black font-bold hover:bg-black hover:text-[#6DCACE] transition-colors"
+            >
+              登录
+            </button>
+          </form>
+
+          <div className="mt-6 text-center">
+            <p className="text-xs text-black">
+              🔒 安全提示：请妥善保管管理密码
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#FFC837]">
@@ -359,6 +483,24 @@ export default function AdminPanel() {
                         {processingIds.has(photo.id)
                           ? "处理中..."
                           : "删除失败项"}
+                      </span>
+                    </button>
+                  </div>
+                )}
+
+                {/* 已通过状态的删除按钮 */}
+                {currentTab === "approved" && (
+                  <div className="mt-3">
+                    <button
+                      onClick={() => handleReject(photo.id)}
+                      disabled={processingIds.has(photo.id)}
+                      className="w-full bg-[#FD543F] text-black py-2 px-3 border-4 border-black font-bold hover:bg-black hover:text-[#FD543F] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-1 text-sm transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                      <span>
+                        {processingIds.has(photo.id)
+                          ? "处理中..."
+                          : "删除"}
                       </span>
                     </button>
                   </div>
