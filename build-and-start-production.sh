@@ -19,6 +19,23 @@ pkill -f "node.*3004\|node.*8080\|node.*8081\|node.*8082" || true
 pkill -f "uvicorn.*8000" || true
 sleep 3
 
+echo "🧹 清理旧的构建文件..."
+# 清理Next.js构建文件
+rm -rf photo-app/.next photo-app/out
+rm -rf display-app/.next display-app/out  
+rm -rf admin-panel/.next admin-panel/out
+
+# 清理Python缓存文件
+rm -rf ai-api-server/__pycache__ 
+find ai-api-server -name "*.pyc" -delete
+find ai-api-server -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+
+# 清理npm缓存（可选，但更安全）
+echo "🧹 清理npm缓存..."
+cd photo-app && npm cache clean --force 2>/dev/null || true && cd ..
+cd display-app && npm cache clean --force 2>/dev/null || true && cd ..
+cd admin-panel && npm cache clean --force 2>/dev/null || true && cd ..
+
 echo "📦 安装依赖..."
 cd photo-app && npm install && cd ..
 cd display-app && npm install && cd ..
