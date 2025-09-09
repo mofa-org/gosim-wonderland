@@ -25,7 +25,7 @@ export default function AdminPanel() {
   const [currentTab, setCurrentTab] = useState<PhotoStatus>("completed");
   const [loading, setLoading] = useState(false);
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
-  
+
   // 登录状态管理
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
@@ -96,7 +96,7 @@ export default function AdminPanel() {
     if (processingIds.has(photoId)) return;
 
     // 获取被通过照片的当前状态
-    const photoToApprove = photos.find(p => p.id === photoId);
+    const photoToApprove = photos.find((p) => p.id === photoId);
     if (!photoToApprove) return;
 
     setProcessingIds((prev) => new Set(prev).add(photoId));
@@ -111,25 +111,25 @@ export default function AdminPanel() {
       if (result.success) {
         // 从当前列表中移除
         setPhotos((prev) => prev.filter((photo) => photo.id !== photoId));
-        
+
         // 根据原始状态正确更新统计
         setStats((prev) => {
           const newStats = { ...prev };
-          
+
           // 减少原状态的计数
-          if (photoToApprove.status === 'pending') {
+          if (photoToApprove.status === "pending") {
             newStats.pending = prev.pending - 1;
-          } else if (photoToApprove.status === 'completed') {
+          } else if (photoToApprove.status === "completed") {
             newStats.completed = prev.completed - 1;
-          } else if (photoToApprove.status === 'failed') {
+          } else if (photoToApprove.status === "failed") {
             newStats.failed = prev.failed - 1;
-          } else if (photoToApprove.status === 'rejected') {
+          } else if (photoToApprove.status === "rejected") {
             newStats.rejected = prev.rejected - 1;
           }
-          
+
           // 增加approved计数
           newStats.approved = prev.approved + 1;
-          
+
           return newStats;
         });
       } else {
@@ -150,7 +150,7 @@ export default function AdminPanel() {
     if (processingIds.has(photoId)) return;
 
     // 获取被删除照片的当前状态
-    const photoToDelete = photos.find(p => p.id === photoId);
+    const photoToDelete = photos.find((p) => p.id === photoId);
     if (!photoToDelete) return;
 
     setProcessingIds((prev) => new Set(prev).add(photoId));
@@ -165,25 +165,25 @@ export default function AdminPanel() {
       if (result.success) {
         // 从当前列表中移除
         setPhotos((prev) => prev.filter((photo) => photo.id !== photoId));
-        
+
         // 根据原始状态正确更新统计
         setStats((prev) => {
           const newStats = { ...prev };
-          
+
           // 减少原状态的计数
-          if (photoToDelete.status === 'pending') {
+          if (photoToDelete.status === "pending") {
             newStats.pending = prev.pending - 1;
-          } else if (photoToDelete.status === 'completed') {
+          } else if (photoToDelete.status === "completed") {
             newStats.completed = prev.completed - 1;
-          } else if (photoToDelete.status === 'failed') {
+          } else if (photoToDelete.status === "failed") {
             newStats.failed = prev.failed - 1;
-          } else if (photoToDelete.status === 'approved') {
+          } else if (photoToDelete.status === "approved") {
             newStats.approved = prev.approved - 1;
           }
-          
+
           // 增加rejected计数
           newStats.rejected = prev.rejected + 1;
-          
+
           return newStats;
         });
       } else {
@@ -269,9 +269,7 @@ export default function AdminPanel() {
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-xs text-black">
-              🔒 安全提示：请妥善保管管理密码
-            </p>
+            <p className="text-xs text-black">如果不知道密码，请联系开发者</p>
           </div>
         </div>
       </div>
@@ -291,31 +289,52 @@ export default function AdminPanel() {
               <p className="text-black mt-1 font-bold">照片审核与管理</p>
             </div>
 
-            <button
-              onClick={loadPhotos}
-              disabled={loading}
-              className="flex items-center space-x-2 bg-[#FFC837] text-black px-4 py-2 border-4 border-black font-bold hover:bg-black hover:text-[#FFC837] transition-colors disabled:opacity-50"
-            >
-              <RefreshCw
-                className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
-              />
-              <span>刷新</span>
-            </button>
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={loadPhotos}
+                disabled={loading}
+                className="flex items-center space-x-2 bg-[#FFC837] text-black px-4 py-2 border-4 border-black font-bold hover:bg-black hover:text-[#FFC837] transition-colors disabled:opacity-50"
+              >
+                <RefreshCw
+                  className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
+                />
+                <span>刷新</span>
+              </button>
+
+              <button
+                onClick={handleLogout}
+                className="flex items-center space-x-2 bg-[#FD543F] text-black px-4 py-2 border-4 border-black font-bold hover:bg-black hover:text-[#FD543F] transition-colors"
+                title="退出登录"
+              >
+                <X className="w-4 h-4" />
+                <span>退出</span>
+              </button>
+            </div>
           </div>
 
           {/* Stats */}
           <div className="grid grid-cols-5 gap-4 mt-6">
-            {(["pending", "completed", "failed", "approved", "rejected"] as PhotoStatus[]).map(
-              (status) => (
-                <div key={status} className="bg-white border-4 border-black p-4">
-                  <div className="flex items-center space-x-2 text-black">
-                    {getTabIcon(status)}
-                    <span className="text-xs font-bold">{getTabName(status)}</span>
-                  </div>
-                  <div className="text-2xl font-bold mt-1 text-black">{stats[status]}</div>
+            {(
+              [
+                "pending",
+                "completed",
+                "failed",
+                "approved",
+                "rejected",
+              ] as PhotoStatus[]
+            ).map((status) => (
+              <div key={status} className="bg-white border-4 border-black p-4">
+                <div className="flex items-center space-x-2 text-black">
+                  {getTabIcon(status)}
+                  <span className="text-xs font-bold">
+                    {getTabName(status)}
+                  </span>
                 </div>
-              ),
-            )}
+                <div className="text-2xl font-bold mt-1 text-black">
+                  {stats[status]}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </header>
@@ -324,25 +343,31 @@ export default function AdminPanel() {
       <div className="max-w-7xl mx-auto px-4">
         <div className="border-b-4 border-black">
           <nav className="flex space-x-2">
-            {(["completed", "pending", "failed", "approved", "rejected"] as PhotoStatus[]).map(
-              (tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setCurrentTab(tab)}
-                  className={`flex items-center space-x-2 py-4 px-3 border-4 border-black font-bold text-xs ${
-                    currentTab === tab
-                      ? "bg-black text-[#FFC837]"
-                      : "bg-white text-black hover:bg-black hover:text-white"
-                  }`}
-                >
-                  {getTabIcon(tab)}
-                  <span>{getTabName(tab)}</span>
-                  <span className="bg-[#FC6A59] text-black px-2 py-1 text-xs font-bold">
-                    {stats[tab]}
-                  </span>
-                </button>
-              ),
-            )}
+            {(
+              [
+                "completed",
+                "pending",
+                "failed",
+                "approved",
+                "rejected",
+              ] as PhotoStatus[]
+            ).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setCurrentTab(tab)}
+                className={`flex items-center space-x-2 py-4 px-3 border-4 border-black font-bold text-xs ${
+                  currentTab === tab
+                    ? "bg-black text-[#FFC837]"
+                    : "bg-white text-black hover:bg-black hover:text-white"
+                }`}
+              >
+                {getTabIcon(tab)}
+                <span>{getTabName(tab)}</span>
+                <span className="bg-[#FC6A59] text-black px-2 py-1 text-xs font-bold">
+                  {stats[tab]}
+                </span>
+              </button>
+            ))}
           </nav>
         </div>
       </div>
@@ -358,7 +383,9 @@ export default function AdminPanel() {
               <div className="absolute bottom-0 right-0 w-8 h-8 bg-[#FD543F]"></div>
               <div className="absolute inset-2 bg-white"></div>
             </div>
-            <p className="text-black font-bold mt-4 bg-white border-4 border-black p-3">加载中...</p>
+            <p className="text-black font-bold mt-4 bg-white border-4 border-black p-3">
+              加载中...
+            </p>
           </div>
         )}
 
@@ -379,10 +406,7 @@ export default function AdminPanel() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {photos.map((photo) => (
-            <div
-              key={photo.id}
-              className="bg-white border-4 border-black"
-            >
+            <div key={photo.id} className="bg-white border-4 border-black">
               {/* 照片对比 */}
               <div className="space-y-3 p-4">
                 {/* 原图 */}
@@ -498,9 +522,7 @@ export default function AdminPanel() {
                     >
                       <X className="w-4 h-4" />
                       <span>
-                        {processingIds.has(photo.id)
-                          ? "处理中..."
-                          : "删除"}
+                        {processingIds.has(photo.id) ? "处理中..." : "删除"}
                       </span>
                     </button>
                   </div>
