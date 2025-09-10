@@ -96,7 +96,7 @@ def generate_image(request: dict):
         if base_image_url.startswith(('http://localhost:', 'http://127.0.0.1:')):
             print(f"本地图片URL: {base_image_url}")
             # 将localhost替换为公网域名
-            public_url = base_image_url.replace('http://localhost:8080', 'http://us.liyao.space:80')
+            public_url = base_image_url.replace('http://localhost:80', 'http://us.liyao.space:80')
             print(f"公网URL: {public_url}")
             base_image_url = public_url
                     # files = {'source': (unique_filename, f.read(), 'image/jpeg')}
