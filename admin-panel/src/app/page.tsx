@@ -472,9 +472,7 @@ export default function AdminPanel() {
                   <div className="flex space-x-2 mt-3">
                     <button
                       onClick={() => handleApprove(photo.id)}
-                      disabled={
-                        processingIds.has(photo.id) || !photo.cartoon_url
-                      }
+                      disabled={processingIds.has(photo.id)}
                       className="flex-1 bg-[#6CC8CC] text-black py-2 px-3 border-4 border-black font-bold hover:bg-black hover:text-[#6CC8CC] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-1 text-sm transition-colors"
                     >
                       <Check className="w-4 h-4" />

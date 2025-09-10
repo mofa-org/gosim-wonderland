@@ -11,6 +11,7 @@ export async function POST(request: NextRequest) {
     const file = formData.get('photo') as File
     const userSession = formData.get('userSession') as string
     const caption = formData.get('caption') as string
+    const useAI = formData.get('useAI') === 'true' // 用户选择是否使用AI
 
     if (!file) {
       return NextResponse.json(
@@ -51,38 +52,46 @@ export async function POST(request: NextRequest) {
     // 存储到数据库
     const photo = photoService.createPhoto(originalUrl, userSession, caption)
     
-    // 调用AI服务处理图片
-    try {
-      const aiResponse = await fetch('http://127.0.0.1:8000/generate-image/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model_name: 'qwen-image-edit',
-          prompt: caption || '生成可爱的卡通形象',
-          base_image_url: `http://localhost:8080${originalUrl}`
+    // 根据用户选择决定是否调用AI服务
+    if (useAI) {
+      // 用户选择AI处理
+      try {
+        const aiResponse = await fetch('http://127.0.0.1:8000/generate-image/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model_name: 'qwen-image-edit',
+            prompt: caption || '生成可爱的卡通形象',
+            base_image_url: `http://localhost:8080${originalUrl}`
+          })
         })
-      })
-      
-      const aiResult = await aiResponse.json()
-      
-      if (aiResult.status === 'success' && aiResult.image_paths?.length > 0) {
-        // 更新数据库，存储AI生成的结果
-        photoService.updatePhoto(photo.id, {
-          cartoon_url: aiResult.image_paths[0],
-          status: 'completed'
-        })
-      } else {
-        // AI处理失败
-        photoService.updatePhoto(photo.id, {
-          status: 'failed',
-          processing_error: 'AI生成失败'
-        })
+        
+        const aiResult = await aiResponse.json()
+        
+        if (aiResult.status === 'success' && aiResult.image_paths?.length > 0) {
+          // 更新数据库，存储AI生成的结果
+          photoService.updatePhoto(photo.id, {
+            cartoon_url: aiResult.image_paths[0],
+            status: 'completed'
+          })
+        } else {
+          // AI处理失败
+          photoService.updatePhoto(photo.id, {
+            status: 'failed',
+            processing_error: 'AI生成失败'
+          })
+        }
+      } catch (error) {
+        console.error('AI处理错误:', error)
+        // AI服务不可用，保持pending状态，稍后可以重试
       }
-    } catch (error) {
-      console.error('AI处理错误:', error)
-      // AI服务不可用，保持pending状态，稍后可以重试
+    } else {
+      // 用户选择直接显示原图，不使用AI处理
+      photoService.updatePhoto(photo.id, {
+        status: 'completed' // 直接标记为完成，display-app会显示original_url
+      })
     }
     
     return NextResponse.json({

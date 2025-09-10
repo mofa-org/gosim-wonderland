@@ -33,6 +33,7 @@ function PhotoApp() {
   const [caption, setCaption] = useState<string>("");
   const [userSession, setUserSession] = useState<string>("");
   const [isVideoReady, setIsVideoReady] = useState<boolean>(false);
+  const [useAI, setUseAI] = useState<boolean>(true); // 用户选择是否使用AI处理
 
   useEffect(() => {
     // 在客户端生成sessionId，避免SSR不匹配
@@ -214,6 +215,7 @@ function PhotoApp() {
       if (caption.trim()) {
         formData.append("caption", caption.trim());
       }
+      formData.append("useAI", useAI.toString());
 
       const uploadResponse = await fetch("/api/upload", {
         method: "POST",
@@ -224,10 +226,15 @@ function PhotoApp() {
 
       if (result.success) {
         setUploadedPhoto(result.photo);
-        setStep("processing");
-
-        // 轮询检查处理状态
-        checkProcessingStatus(result.photo.id);
+        
+        if (useAI) {
+          setStep("processing");
+          // 轮询检查处理状态
+          checkProcessingStatus(result.photo.id);
+        } else {
+          // 用户选择保持原样，直接跳到结果页面
+          setStep("result");
+        }
       } else {
         setError(result.error || "上传失败");
         setStep("error");
@@ -236,7 +243,7 @@ function PhotoApp() {
       setError("网络错误，请重试");
       setStep("error");
     }
-  }, [capturedImage, userSession, caption]);
+  }, [capturedImage, userSession, caption, useAI]);
 
   const checkProcessingStatus = useCallback(async (photoId: string) => {
     const checkStatus = async () => {
@@ -440,90 +447,137 @@ function PhotoApp() {
 
           {step === "caption" && (
             <div className="space-y-6">
-              <div className="text-center bg-[#FFC837] p-4 border-4 border-black">
-                <h3 className="text-xl font-bold text-black mb-2">
-                  AI风格定制
-                </h3>
-                <p className="text-black text-sm font-bold">
-                  告诉AI你想要什么样的卡通风格！
-                </p>
-              </div>
-
-              {/* 预设风格选项 */}
-              <div>
-                <h4 className="text-sm font-bold text-black mb-3 bg-[#6DCACE] p-2 border-4 border-black text-center">
-                  热门风格选择
-                </h4>
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  {[
-                    {
-                      label: "科技极客",
-                      value:
-                        "科技感十足的卡通风格，突出程序员气质，代码元素背景，现代简洁",
-                      color: "#FFC837",
-                    },
-                    {
-                      label: "专业商务",
-                      value:
-                        "专业会议风格，正式但有趣，保持职场精英形象，商务色调",
-                      color: "#FC6A59",
-                    },
-                    {
-                      label: "创新活力",
-                      value:
-                        "充满创新活力的风格，年轻化表达，鲜明色彩，体现开发者激情",
-                      color: "#6ECACD",
-                    },
-                    {
-                      label: "简约现代",
-                      value:
-                        "简约现代的卡通风格，线条清晰，色彩和谐，突出科技会议氛围",
-                      color: "#6DCACE",
-                    },
-                  ].map((preset) => (
-                    <button
-                      key={preset.label}
-                      onClick={() => setCaption(preset.value)}
-                      className={`p-3 text-xs bg-[${preset.color}] border-4 border-black font-bold text-black hover:bg-black hover:text-[${preset.color}] transition-colors`}
-                    >
-                      {preset.label}
-                    </button>
-                  ))}
+              {/* AI风格定制选项 - 只在选择AI处理时显示 */}
+              {useAI && (
+                <div className="bg-[#FFC837] p-4 border-4 border-black">
+                  <h3 className="text-lg font-bold text-black mb-2 text-center">
+                    AI风格定制
+                  </h3>
+                  <p className="text-black text-sm font-bold text-center">
+                    告诉AI你想要什么样的卡通风格！
+                  </p>
                 </div>
-              </div>
-
-              {/* 自定义输入框 */}
-              <div>
-                <label
-                  htmlFor="caption"
-                  className="block text-sm font-bold text-black mb-2 bg-[#FFC837] p-2 border-4 border-black"
-                >
-                  自定义需求输入
-                </label>
-                <textarea
-                  id="caption"
-                  value={caption}
-                  onChange={(e) => setCaption(e.target.value)}
-                  placeholder="例如：程序员卡通形象，戴着程序员帽，背景有代码屏幕，科技蓝色调，体现GOSIM大会氛围..."
-                  className="w-full p-4 border-4 border-black resize-none bg-white text-black focus:outline-none focus:bg-[#FFC837] text-sm font-medium"
-                  rows={4}
-                  maxLength={300}
-                />
-                <div className="flex justify-between items-center mt-2 bg-black text-[#FFC837] p-2 border-4 border-black">
-                  <div className="text-xs font-bold">提示：越详细越精准</div>
-                  <div className="text-xs font-bold">{caption.length}/300</div>
-                </div>
-              </div>
-
-              {/* 清空按钮 */}
-              {caption && (
-                <button
-                  onClick={() => setCaption("")}
-                  className="w-full py-3 text-sm font-bold text-black bg-[#FC6A59] border-4 border-black hover:bg-black hover:text-[#FC6A59] transition-colors"
-                >
-                  清空重新输入
-                </button>
               )}
+
+              {/* 预设风格选项 - 只在选择AI处理时显示 */}
+              {useAI && (
+                <div>
+                  <h4 className="text-sm font-bold text-black mb-3 bg-[#6DCACE] p-2 border-4 border-black text-center">
+                    热门风格选择
+                  </h4>
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    {[
+                      {
+                        label: "科技极客",
+                        value:
+                          "科技感十足的卡通风格，突出程序员气质，代码元素背景，现代简洁",
+                        color: "#FFC837",
+                      },
+                      {
+                        label: "专业商务",
+                        value:
+                          "专业会议风格，正式但有趣，保持职场精英形象，商务色调",
+                        color: "#FC6A59",
+                      },
+                      {
+                        label: "创新活力",
+                        value:
+                          "充满创新活力的风格，年轻化表达，鲜明色彩，体现开发者激情",
+                        color: "#6ECACD",
+                      },
+                      {
+                        label: "简约现代",
+                        value:
+                          "简约现代的卡通风格，线条清晰，色彩和谐，突出科技会议氛围",
+                        color: "#6DCACE",
+                      },
+                    ].map((preset) => (
+                      <button
+                        key={preset.label}
+                        onClick={() => setCaption(preset.value)}
+                        className={`p-3 text-xs bg-[${preset.color}] border-4 border-black font-bold text-black hover:bg-black hover:text-[${preset.color}] transition-colors`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* 自定义输入框 */}
+                  <div>
+                    <label
+                      htmlFor="caption"
+                      className="block text-sm font-bold text-black mb-2 bg-[#FFC837] p-2 border-4 border-black"
+                    >
+                      自定义需求输入
+                    </label>
+                    <textarea
+                      id="caption"
+                      value={caption}
+                      onChange={(e) => setCaption(e.target.value)}
+                      placeholder="例如：程序员卡通形象，戴着程序员帽，背景有代码屏幕，科技蓝色调，体现GOSIM大会氛围..."
+                      className="w-full p-4 border-4 border-black resize-none bg-white text-black focus:outline-none focus:bg-[#FFC837] text-sm font-medium"
+                      rows={4}
+                      maxLength={300}
+                    />
+                    <div className="flex justify-between items-center mt-2 bg-black text-[#FFC837] p-2 border-4 border-black">
+                      <div className="text-xs font-bold">
+                        提示：越详细越精准
+                      </div>
+                      <div className="text-xs font-bold">
+                        {caption.length}/300
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 清空按钮 */}
+                  {caption && (
+                    <button
+                      onClick={() => setCaption("")}
+                      className="w-full py-3 text-sm font-bold text-black bg-[#FC6A59] border-4 border-black hover:bg-black hover:text-[#FC6A59] transition-colors"
+                    >
+                      清空重新输入
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* AI处理选择 */}
+              <div className="text-center space-y-4">
+                <div className="bg-[#FFC837] p-4 border-4 border-black">
+                  <h3 className="text-xl font-bold text-black mb-2">
+                    选择处理方式
+                  </h3>
+                  <p className="text-black text-sm font-bold">
+                    您希望如何处理您的照片？
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    onClick={() => setUseAI(true)}
+                    className={`p-4 border-4 border-black font-bold transition-colors ${
+                      useAI
+                        ? "bg-[#6DCACE] text-black"
+                        : "bg-white text-black hover:bg-[#6DCACE]"
+                    }`}
+                  >
+                    <div className="text-sm font-bold">AI卡通化</div>
+                    <div className="text-xs mt-1">生成卡通风格</div>
+                  </button>
+
+                  <button
+                    onClick={() => setUseAI(false)}
+                    className={`p-4 border-4 border-black font-bold transition-colors ${
+                      !useAI
+                        ? "bg-[#6DCACE] text-black"
+                        : "bg-white text-black hover:bg-[#6DCACE]"
+                    }`}
+                  >
+                    <div className="text-sm font-bold">保持原样</div>
+                    <div className="text-xs mt-1">直接显示原图</div>
+                  </button>
+                </div>
+              </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <button
@@ -536,7 +590,7 @@ function PhotoApp() {
                   onClick={uploadPhoto}
                   className="bg-[#FFC837] text-black py-4 px-4 border-4 border-black font-bold hover:bg-black hover:text-[#FFC837] transition-colors"
                 >
-                  生成卡通
+                  {useAI ? "生成" : "上传展示"}
                 </button>
               </div>
             </div>
@@ -568,27 +622,33 @@ function PhotoApp() {
                 <div className="absolute inset-2 bg-white"></div>
               </div>
               <div className="bg-[#FFC837] p-4 border-4 border-black">
-                <h3 className="text-lg font-bold text-black">AI处理中</h3>
-                <p className="text-black font-bold">正在为您生成专属卡通形象</p>
+                <h3 className="text-lg font-bold text-black">
+                  {useAI ? "AI处理中" : "处理中"}
+                </h3>
+                <p className="text-black font-bold">
+                  {useAI ? "正在为您生成专属卡通形象" : "正在处理您的照片"}
+                </p>
               </div>
             </div>
           )}
 
-          {step === "result" && uploadedPhoto?.cartoon_url && (
+          {step === "result" && uploadedPhoto && (
             <div className="space-y-4">
               <div className="text-center bg-[#FFC837] p-4 border-4 border-black">
                 <CheckCircle className="w-12 h-12 text-black mx-auto mb-2" />
-                <h3 className="text-lg font-bold text-black">生成成功！</h3>
+                <h3 className="text-lg font-bold text-black">
+                  {useAI && uploadedPhoto.cartoon_url ? "生成成功！" : "上传成功！"}
+                </h3>
               </div>
               <div className="aspect-square bg-white border-4 border-black">
                 <img
-                  src={uploadedPhoto.cartoon_url}
-                  alt="卡通形象"
+                  src={uploadedPhoto.cartoon_url || uploadedPhoto.original_url}
+                  alt={useAI ? "卡通形象" : "原图"}
                   className="w-full h-full object-cover"
                 />
               </div>
               <p className="text-sm text-black text-center font-bold bg-[#6DCACE] p-3 border-4 border-black">
-                您的图片已生成，稍后将在大屏幕上展示
+                您的图片已上传，稍后将在大屏幕上展示
               </p>
               <button
                 onClick={resetApp}

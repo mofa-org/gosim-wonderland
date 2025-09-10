@@ -9,12 +9,10 @@ export default function DisplayApp() {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isConnected, setIsConnected] = useState(false)
   const [error, setError] = useState<string>('')
-  // 新增：无图片时的循环显示状态
+  // 显示状态：true=二维码页面，false=图片轮播
   const [showWelcome, setShowWelcome] = useState(true)
-  // 新增：快捷键提示自动隐藏
+  // 快捷键提示自动隐藏
   const [showShortcuts, setShowShortcuts] = useState(true)
-  // 新增：有图片时也显示二维码的计数器
-  const [cycleCount, setCycleCount] = useState(0)
   
   // 折叠状态管理
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false)
@@ -42,9 +40,9 @@ export default function DisplayApp() {
         
         if (data.type === 'photos_update') {
           setPhotos(data.photos)
-          // 如果有照片了，重置欢迎页面状态
+          // 如果有照片了，不显示欢迎页面
           if (data.photos.length > 0) {
-            setShowWelcome(true)
+            setShowWelcome(false)
           }
         } else if (data.type === 'error') {
           setError(data.message)
@@ -74,36 +72,51 @@ export default function DisplayApp() {
   }, [])
 
   // 自动轮播 - 包括无图片时的欢迎页面循环和有图片时的二维码插入
+  // 图片轮播 - 真全屏模式下有抽签机制
   useEffect(() => {
     if (photos.length === 0) {
-      // 无图片时，每10秒切换欢迎页面的显示/隐藏，确保用户能看到二维码
-      const interval = setInterval(() => {
-        setShowWelcome(prev => !prev)
-      }, 10000)
-      return () => clearInterval(interval)
+      // 无照片时不显示任何轮播
+      return
     }
 
-    // 有图片时的轮播，每隔5张图片显示一次二维码
-    const interval = setInterval(() => {
-      setCycleCount(prevCount => {
-        const newCount = prevCount + 1
-        // 每6次循环（每6张图后）显示一次二维码页面
-        if (newCount % 6 === 0) {
-          setShowWelcome(true)  // 显示二维码页面
-          setTimeout(() => {
-            setShowWelcome(false) // 3秒后回到图片轮播
+    // 有照片时的轮播逻辑
+    setShowWelcome(false)
+    
+    let timeoutId: NodeJS.Timeout
+    
+    const nextSlide = () => {
+      if (isTrueFullscreen) {
+        // 真全屏模式：每次切换图片时抽签
+        const showQR = Math.random() < 0.5
+        
+        if (showQR) {
+          // 抽中二维码：显示8秒后切换到下一张图片
+          setShowWelcome(true)
+          timeoutId = setTimeout(() => {
+            setShowWelcome(false)
             setCurrentIndex(prev => (prev + 1) % photos.length)
-          }, 3000)
+            timeoutId = setTimeout(nextSlide, 5000) // 下一张图片5秒后切换
+          }, 8000)
         } else {
-          setShowWelcome(false) // 正常显示图片
+          // 没抽中：直接显示下一张图片
+          setShowWelcome(false)
           setCurrentIndex(prev => (prev + 1) % photos.length)
+          timeoutId = setTimeout(nextSlide, 5000) // 5秒后再次抽签
         }
-        return newCount
-      })
-    }, 6000) // 每6秒切换
-
-    return () => clearInterval(interval)
-  }, [photos.length])
+      } else {
+        // 普通模式：纯图片轮播
+        setCurrentIndex(prev => (prev + 1) % photos.length)
+        timeoutId = setTimeout(nextSlide, 5000)
+      }
+    }
+    
+    // 开始轮播
+    timeoutId = setTimeout(nextSlide, 5000)
+    
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId)
+    }
+  }, [photos.length, isTrueFullscreen])
 
   const loadPhotos = async () => {
     try {
@@ -112,9 +125,9 @@ export default function DisplayApp() {
       
       if (result.success) {
         setPhotos(result.photos)
-        // 如果有照片了，重置欢迎页面状态
+        // 如果有照片了，不显示欢迎页面
         if (result.photos.length > 0) {
-          setShowWelcome(true)
+          setShowWelcome(false)
         }
       } else {
         setError('加载照片失败')
@@ -188,21 +201,46 @@ export default function DisplayApp() {
           </div>
         )}
 
-        {/* 主图片 - 占满整个屏幕 */}
-        {photos.length > 0 && currentPhoto && (
-          <div className="w-full h-full relative">
-            <Image
-              src={currentPhoto.cartoon_url || currentPhoto.original_url}
-              alt="卡通头像"
-              fill
-              className="object-contain"
-              priority
-            />
-          </div>
-        )}
-
-        {/* 无照片时的提示 */}
-        {photos.length === 0 && (
+        {/* 显示二维码还是图片 - 带翻页特效 */}
+        {photos.length > 0 ? (
+          showWelcome ? (
+            /* 二维码页面 - 全屏版 */
+            <div className="w-full h-full bg-[#FFC837] flex items-center justify-center animate-fade-in">
+              <div className="text-center">
+                <div className="bg-[#6DCACE] p-12 border-8 border-black mb-8 transform transition-all duration-500 animate-slide-in-right">
+                  <h1 className="text-6xl font-bold text-black mb-4">
+                    GOSIM Wonderland
+                  </h1>
+                  <p className="text-3xl text-black font-bold">
+                    拍照生成专属个性化图片
+                  </p>
+                </div>
+                <div className="bg-white p-8 border-8 border-black inline-block transform transition-all duration-700 animate-slide-in-left">
+                  <img 
+                    src="/qr-code.png" 
+                    alt="QR Code"
+                    className="w-48 h-48 mx-auto"
+                  />
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* 主图片 - 占满整个屏幕 */
+            currentPhoto && (
+              <div className="w-full h-full relative animate-fade-in">
+                <Image
+                  key={currentIndex} // 添加key让每次切换都触发动画
+                  src={currentPhoto.cartoon_url || currentPhoto.original_url}
+                  alt="卡通头像"
+                  fill
+                  className="object-contain transition-opacity duration-500"
+                  priority
+                />
+              </div>
+            )
+          )
+        ) : (
+          /* 无照片时的提示 */
           <div className="w-full h-full flex items-center justify-center text-white">
             <div className="text-center">
               <div className="text-2xl font-bold mb-4">暂无照片</div>
