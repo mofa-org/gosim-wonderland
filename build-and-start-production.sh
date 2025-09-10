@@ -19,6 +19,10 @@ pkill -f "node.*3004\|node.*8080\|node.*8081\|node.*8082" || true
 pkill -f "uvicorn.*8000" || true
 sleep 3
 
+echo "📁 创建必要目录..."
+mkdir -p original-photos ai-photos data logs
+chmod 755 original-photos ai-photos data logs
+
 echo "📦 安装依赖..."
 cd photo-app && npm install && cd ..
 cd display-app && npm install && cd ..
@@ -29,10 +33,6 @@ echo "🔨 构建生产版本..."
 cd photo-app && npm run build && cd ..
 cd display-app && npm run build && cd ..
 cd admin-panel && npm run build && cd ..
-
-echo "📁 创建必要目录..."
-mkdir -p original-photos ai-photos data logs
-chmod 755 original-photos ai-photos data logs
 
 echo "🚀 启动所有服务..."
 
