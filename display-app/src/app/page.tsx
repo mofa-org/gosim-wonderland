@@ -9,6 +9,12 @@ export default function DisplayApp() {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isConnected, setIsConnected] = useState(false)
   const [error, setError] = useState<string>('')
+  // 新增：无图片时的循环显示状态
+  const [showWelcome, setShowWelcome] = useState(true)
+  // 新增：快捷键提示自动隐藏
+  const [showShortcuts, setShowShortcuts] = useState(true)
+  // 新增：有图片时也显示二维码的计数器
+  const [cycleCount, setCycleCount] = useState(0)
   
   // 折叠状态管理
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false)
@@ -36,6 +42,10 @@ export default function DisplayApp() {
         
         if (data.type === 'photos_update') {
           setPhotos(data.photos)
+          // 如果有照片了，重置欢迎页面状态
+          if (data.photos.length > 0) {
+            setShowWelcome(true)
+          }
         } else if (data.type === 'error') {
           setError(data.message)
         }
@@ -54,12 +64,42 @@ export default function DisplayApp() {
     }
   }, [])
 
-  // 自动轮播
+  // 快捷键提示自动隐藏
   useEffect(() => {
-    if (photos.length === 0) return
+    const timer = setTimeout(() => {
+      setShowShortcuts(false)
+    }, 1000) // 1秒后自动隐藏
 
+    return () => clearTimeout(timer)
+  }, [])
+
+  // 自动轮播 - 包括无图片时的欢迎页面循环和有图片时的二维码插入
+  useEffect(() => {
+    if (photos.length === 0) {
+      // 无图片时，每10秒切换欢迎页面的显示/隐藏，确保用户能看到二维码
+      const interval = setInterval(() => {
+        setShowWelcome(prev => !prev)
+      }, 10000)
+      return () => clearInterval(interval)
+    }
+
+    // 有图片时的轮播，每隔5张图片显示一次二维码
     const interval = setInterval(() => {
-      setCurrentIndex(prev => (prev + 1) % photos.length)
+      setCycleCount(prevCount => {
+        const newCount = prevCount + 1
+        // 每6次循环（每6张图后）显示一次二维码页面
+        if (newCount % 6 === 0) {
+          setShowWelcome(true)  // 显示二维码页面
+          setTimeout(() => {
+            setShowWelcome(false) // 3秒后回到图片轮播
+            setCurrentIndex(prev => (prev + 1) % photos.length)
+          }, 3000)
+        } else {
+          setShowWelcome(false) // 正常显示图片
+          setCurrentIndex(prev => (prev + 1) % photos.length)
+        }
+        return newCount
+      })
     }, 6000) // 每6秒切换
 
     return () => clearInterval(interval)
@@ -72,6 +112,10 @@ export default function DisplayApp() {
       
       if (result.success) {
         setPhotos(result.photos)
+        // 如果有照片了，重置欢迎页面状态
+        if (result.photos.length > 0) {
+          setShowWelcome(true)
+        }
       } else {
         setError('加载照片失败')
       }
@@ -172,18 +216,38 @@ export default function DisplayApp() {
 
   return (
     <div className="min-h-screen bg-[#FFC837] flex flex-col relative">
-      {/* 快捷键提示 - 右上角浮动 */}
-      <div className="fixed top-4 right-4 z-50">
-        <div className="bg-black bg-opacity-75 text-white text-xs p-2 border border-white">
-          <div className="font-bold mb-1">快捷键</div>
-          <div>H - 折叠头部</div>
-          <div>B - 折叠底部</div>
-          <div>S - 折叠侧栏</div>
-          <div>A - 折叠模式</div>
-          <div>F - 真全屏</div>
-          <div>ESC - 恢复全部</div>
+      {/* 快捷键提示 - 左上角浮动，15秒后自动隐藏 */}
+      {showShortcuts ? (
+        <div className="fixed top-4 left-4 z-50 animate-fade-in">
+          <div 
+            className="bg-black bg-opacity-75 text-white text-xs p-2 border border-white cursor-pointer hover:bg-opacity-90"
+            onClick={() => setShowShortcuts(false)}
+          >
+            <div className="font-bold mb-1 flex justify-between items-center">
+              快捷键 
+              <span className="text-xs opacity-75">×</span>
+            </div>
+            <div>H - 折叠头部</div>
+            <div>B - 折叠底部</div>
+            <div>S - 折叠侧栏</div>
+            <div>A - 折叠模式</div>
+            <div>F - 真全屏</div>
+            <div>ESC - 恢复全部</div>
+            <div className="text-xs opacity-75 mt-1">1秒后自动隐藏</div>
+          </div>
         </div>
-      </div>
+      ) : (
+        // 隐藏后显示一个小按钮，点击可重新显示 - 放在左下角
+        <div className="fixed bottom-4 left-4 z-50">
+          <button
+            onClick={() => setShowShortcuts(true)}
+            className="bg-black bg-opacity-50 text-white text-xs px-2 py-1 border border-white hover:bg-opacity-75 transition-all"
+            title="显示快捷键帮助"
+          >
+            ⌨️
+          </button>
+        </div>
+      )}
 
       {/* 折叠全屏模式指示器 */}
       {isFullscreen && !isTrueFullscreen && (
@@ -233,14 +297,14 @@ export default function DisplayApp() {
                 ▲
               </button>
               
-              {/* 右侧二维码 */}
-              <div className="bg-white border-2 border-black p-1">
+              {/* 右侧二维码 - 放大版本 */}
+              <div className="bg-white border-2 border-black p-2">
                 <Image
                   src="/qr-code.png"
                   alt="扫描二维码拍照"
-                  width={40}
-                  height={40}
-                  className="w-10 h-10 object-contain"
+                  width={60}
+                  height={60}
+                  className="w-15 h-15 object-contain"
                 />
               </div>
             </div>
@@ -281,38 +345,55 @@ export default function DisplayApp() {
 
         {!error && photos.length === 0 && (
           <div className="text-center">
-            <div className="bg-white border-4 border-black text-black p-12">
-              <div className="w-24 h-24 mx-auto mb-6 bg-[#FFC837] border-4 border-black flex items-center justify-center">
-                <svg className="w-12 h-12" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                </svg>
-              </div>
-              <h2 className="text-3xl font-bold mb-6">欢迎来到 GOSIM Wonderland</h2>
-              
-              {/* 二维码区域 */}
-              <div className="mb-6">
-                <div className="w-48 h-48 mx-auto bg-white border-4 border-black p-4">
-                  <Image
-                    src="/qr-code.png"
-                    alt="扫描二维码拍照"
-                    width={176}
-                    height={176}
-                    className="w-full h-full object-contain"
-                  />
+            {/* 根据showWelcome状态控制显示内容 */}
+            {showWelcome ? (
+              // 欢迎页面 - 包含二维码
+              <div className="bg-white border-4 border-black text-black p-12 transition-all duration-1000">
+                <div className="w-24 h-24 mx-auto mb-6 bg-[#FFC837] border-4 border-black flex items-center justify-center">
+                  <svg className="w-12 h-12" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                  </svg>
                 </div>
+                <h2 className="text-3xl font-bold mb-6">欢迎来到 GOSIM Wonderland</h2>
+                
+                {/* 大二维码区域 */}
+                <div className="mb-6">
+                  <div className="w-64 h-64 mx-auto bg-white border-4 border-black p-4">
+                    <Image
+                      src="/qr-code.png"
+                      alt="扫描二维码拍照"
+                      width={224}
+                      height={224}
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                </div>
+                
+                <p className="text-xl font-bold">
+                  扫描上方二维码拍照生成你的专属卡通形象！
+                </p>
               </div>
-              
-              <p className="text-xl font-bold">
-                扫描上方二维码拍照生成你的专属卡通头像！
-              </p>
-            </div>
+            ) : (
+              // 简洁提示页面
+              <div className="bg-[#6DCACE] border-4 border-black text-black p-12 transition-all duration-1000">
+                <div className="w-32 h-32 mx-auto mb-8 bg-[#FFC837] border-4 border-black flex items-center justify-center">
+                  <svg className="w-16 h-16" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                </div>
+                <h2 className="text-4xl font-bold mb-4">准备好了吗？</h2>
+                <p className="text-2xl font-bold">
+                  扫描二维码开始您的GOSIM之旅
+                </p>
+              </div>
+            )}
           </div>
         )}
 
-        {!error && photos.length > 0 && currentPhoto && (
+        {!error && photos.length > 0 && (
           <div className="w-full h-full flex items-center justify-center">
             <div className="w-full h-full flex flex-col lg:flex-row gap-2">
-              {/* 主照片显示区 - 自适应显示 */}
+              {/* 主显示区 - 可能是照片或二维码页面 */}
               <div className="flex-1 flex items-center justify-center">
                 <div className={`bg-white border-4 border-black w-full transition-all duration-500 ${
                   // 根据折叠状态动态调整高度
@@ -322,15 +403,49 @@ export default function DisplayApp() {
                     ? 'h-[92vh]'
                     : 'h-[85vh]'
                 }`}>
-                  <div className="w-full h-full relative bg-white">
-                    <Image
-                      src={currentPhoto.cartoon_url || currentPhoto.original_url}
-                      alt="卡通头像"
-                      fill
-                      className="object-contain transition-all duration-1000"
-                      priority
-                    />
-                  </div>
+                  {showWelcome ? (
+                    // 显示二维码页面（插播）- 使用和无图时相同的欢迎页面
+                    <div className="w-full h-full flex items-center justify-center bg-white">
+                      <div className="text-center text-black p-8">
+                        <div className="w-24 h-24 mx-auto mb-6 bg-[#FFC837] border-4 border-black flex items-center justify-center">
+                          <svg className="w-12 h-12" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                          </svg>
+                        </div>
+                        <h2 className="text-2xl font-bold mb-6">你也来试试吧！</h2>
+                        
+                        {/* 大二维码 */}
+                        <div className="mb-6">
+                          <div className="w-56 h-56 mx-auto bg-white border-4 border-black p-4">
+                            <Image
+                              src="/qr-code.png"
+                              alt="扫描二维码拍照"
+                              width={192}
+                              height={192}
+                              className="w-full h-full object-contain"
+                            />
+                          </div>
+                        </div>
+                        
+                        <p className="text-xl font-bold">
+                          扫描上方二维码拍照生成你的专属卡通形象！
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    // 显示当前照片
+                    currentPhoto && (
+                      <div className="w-full h-full relative bg-white">
+                        <Image
+                          src={currentPhoto.cartoon_url || currentPhoto.original_url}
+                          alt="卡通形象"
+                          fill
+                          className="object-contain transition-all duration-1000"
+                          priority
+                        />
+                      </div>
+                    )
+                  )}
                 </div>
               </div>
 
