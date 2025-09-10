@@ -683,23 +683,34 @@ function PhotoApp() {
           <div className="text-sm font-bold text-black mb-3">
             Powered by <span className="text-[#6DCACE]">mofa.ai</span>
           </div>
-          <div className="flex justify-center space-x-4">
+          <div className="flex justify-center space-x-2 mb-4">
+            <a
+              href="https://wonderland.mofa.ai:8081"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center space-x-1 bg-[#FC6A59] text-black px-4 py-2 border-2 border-black font-bold hover:bg-black hover:text-[#FC6A59] transition-colors text-sm"
+            >
+              <ExternalLink className="w-4 h-4" />
+              <span>查看大屏展示</span>
+            </a>
+          </div>
+          <div className="flex justify-center space-x-2">
             <a
               href="https://mofa.ai/"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center space-x-1 bg-[#6DCACE] text-black px-4 py-2 border-2 border-black font-bold hover:bg-black hover:text-[#6DCACE] transition-colors text-sm"
+              className="flex items-center space-x-1 bg-[#6DCACE] text-black px-3 py-2 border-2 border-black font-bold hover:bg-black hover:text-[#6DCACE] transition-colors text-xs"
             >
-              <ExternalLink className="w-4 h-4" />
-              <span>访问 mofa.ai</span>
+              <ExternalLink className="w-3 h-3" />
+              <span>mofa.ai</span>
             </a>
             <a
               href="https://github.com/mofa-org/mofa"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center space-x-1 bg-[#FFC837] text-black px-4 py-2 border-2 border-black font-bold hover:bg-black hover:text-[#FFC837] transition-colors text-sm"
+              className="flex items-center space-x-1 bg-[#FFC837] text-black px-3 py-2 border-2 border-black font-bold hover:bg-black hover:text-[#FFC837] transition-colors text-xs"
             >
-              <Github className="w-4 h-4" />
+              <Github className="w-3 h-3" />
               <span>GitHub</span>
             </a>
           </div>

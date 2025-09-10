@@ -52,7 +52,7 @@ sleep 3
 # 启动Next.js应用 - 绑定到所有IP
 echo "📱 启动Photo App (端口 8080)..."
 cd photo-app
-PORT=8080 HOSTNAME=0.0.0.0 nohup npm start > ../logs/photo-app.log 2>&1 &
+PORT=80 HOSTNAME=0.0.0.0 nohup npm start > ../logs/photo-app.log 2>&1 &
 cd ..
 
 echo "📺 启动Display App (端口 8081)..."
