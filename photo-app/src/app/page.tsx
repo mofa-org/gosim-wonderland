@@ -34,6 +34,7 @@ function PhotoApp() {
   const [userSession, setUserSession] = useState<string>("");
   const [isVideoReady, setIsVideoReady] = useState<boolean>(false);
   const [useAI, setUseAI] = useState<boolean>(true); // 用户选择是否使用AI处理
+  const [cameraSupported, setCameraSupported] = useState<boolean>(true); // 摄像头是否支持
 
   useEffect(() => {
     // 在客户端生成sessionId，避免SSR不匹配
@@ -47,6 +48,24 @@ function PhotoApp() {
 
   const startCamera = useCallback(async () => {
     try {
+      // 检查浏览器支持
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error(
+          "您的浏览器不支持摄像头功能，请使用现代浏览器或检查是否为HTTPS连接",
+        );
+      }
+
+      // 检查是否为安全上下文（HTTPS或localhost）
+      if (
+        location.protocol !== "https:" &&
+        location.hostname !== "localhost" &&
+        location.hostname !== "127.0.0.1"
+      ) {
+        throw new Error(
+          "摄像头功能需要HTTPS连接，请使用HTTPS访问或在本地环境测试",
+        );
+      }
+
       // 清理之前的stream
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
@@ -344,7 +363,7 @@ function PhotoApp() {
                   选择图片方式
                 </h2>
                 <p className="text-black">
-                  拍照或上传图片，我们会为您生成可爱的卡通形象！
+                  拍照或上传图片，我们会为您生成定制图像！
                 </p>
               </div>
               <div className="space-y-4">
