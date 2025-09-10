@@ -226,7 +226,7 @@ function PhotoApp() {
 
       if (result.success) {
         setUploadedPhoto(result.photo);
-        
+
         if (useAI) {
           setStep("processing");
           // 轮询检查处理状态
@@ -637,7 +637,9 @@ function PhotoApp() {
               <div className="text-center bg-[#FFC837] p-4 border-4 border-black">
                 <CheckCircle className="w-12 h-12 text-black mx-auto mb-2" />
                 <h3 className="text-lg font-bold text-black">
-                  {useAI && uploadedPhoto.cartoon_url ? "生成成功！" : "上传成功！"}
+                  {useAI && uploadedPhoto.cartoon_url
+                    ? "生成成功！"
+                    : "上传成功！"}
                 </h3>
               </div>
               <div className="aspect-square bg-white border-4 border-black">
@@ -685,7 +687,7 @@ function PhotoApp() {
           </div>
           <div className="flex justify-center space-x-2 mb-4">
             <a
-              href="https://wonderland.mofa.ai:8081"
+              href="http://wonderland.mofa.ai:8081"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center space-x-1 bg-[#FC6A59] text-black px-4 py-2 border-2 border-black font-bold hover:bg-black hover:text-[#FC6A59] transition-colors text-sm"
