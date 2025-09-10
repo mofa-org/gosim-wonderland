@@ -8,6 +8,8 @@ import {
   CheckCircle,
   AlertCircle,
   ImageIcon,
+  Github,
+  ExternalLink,
 } from "lucide-react";
 import { generateSessionId } from "@/lib/utils";
 import { Photo } from "@/lib/types";
@@ -469,6 +471,35 @@ export default function PhotoApp() {
               </button>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="mt-6 bg-white border-4 border-black max-w-md w-full">
+        <div className="p-4 text-center">
+          <div className="text-sm font-bold text-black mb-3">
+            Powered by <span className="text-[#6DCACE]">mofa.ai</span>
+          </div>
+          <div className="flex justify-center space-x-4">
+            <a
+              href="https://mofa.ai/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center space-x-1 bg-[#6DCACE] text-black px-4 py-2 border-2 border-black font-bold hover:bg-black hover:text-[#6DCACE] transition-colors text-sm"
+            >
+              <ExternalLink className="w-4 h-4" />
+              <span>访问 mofa.ai</span>
+            </a>
+            <a
+              href="https://github.com/mofa-org/mofa"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center space-x-1 bg-[#FFC837] text-black px-4 py-2 border-2 border-black font-bold hover:bg-black hover:text-[#FFC837] transition-colors text-sm"
+            >
+              <Github className="w-4 h-4" />
+              <span>GitHub</span>
+            </a>
+          </div>
         </div>
       </div>
 
