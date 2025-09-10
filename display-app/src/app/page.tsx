@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import { Photo } from '@/lib/types'
 
@@ -13,6 +13,11 @@ export default function DisplayApp() {
   const [showWelcome, setShowWelcome] = useState(true)
   // 快捷键提示自动隐藏
   const [showShortcuts, setShowShortcuts] = useState(true)
+  // 音频播放状态
+  const [currentAudioIndex, setCurrentAudioIndex] = useState(0)
+  
+  // 音频文件列表
+  const audioFiles = ['1.mp3', '2.mp3', '3.mp3', '4.mp3', '5.mp3']
   
   // 折叠状态管理
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false)
@@ -70,6 +75,7 @@ export default function DisplayApp() {
 
     return () => clearTimeout(timer)
   }, [])
+
 
   // 自动轮播 - 包括无图片时的欢迎页面循环和有图片时的二维码插入
   // 图片轮播 - 真全屏模式下有抽签机制
@@ -192,6 +198,17 @@ export default function DisplayApp() {
   if (isTrueFullscreen) {
     return (
       <div className="w-screen h-screen bg-black relative overflow-hidden">
+        {/* 背景音乐 - 真全屏模式 */}
+        <audio 
+          key={currentAudioIndex}
+          autoPlay 
+          muted={false}
+          volume={0.3}
+          style={{ display: 'none' }}
+          onEnded={() => setCurrentAudioIndex(prev => (prev + 1) % audioFiles.length)}
+        >
+          <source src={`/${audioFiles[currentAudioIndex]}`} type="audio/mpeg" />
+        </audio>
         {/* 真全屏退出提示 - 只在开始3秒显示 */}
         {showTrueFullscreenTip && (
           <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 animate-fade-in">
@@ -201,26 +218,69 @@ export default function DisplayApp() {
           </div>
         )}
 
+
         {/* 显示二维码还是图片 - 带翻页特效 */}
         {photos.length > 0 ? (
           showWelcome ? (
             /* 二维码页面 - 全屏版 */
             <div className="w-full h-full bg-[#FFC837] flex items-center justify-center animate-fade-in">
-              <div className="text-center">
+              <div className="text-center max-w-4xl px-8">
+                {/* 主标题 */}
                 <div className="bg-[#6DCACE] p-12 border-8 border-black mb-8 transform transition-all duration-500 animate-slide-in-right">
                   <h1 className="text-6xl font-bold text-black mb-4">
                     GOSIM Wonderland
                   </h1>
-                  <p className="text-3xl text-black font-bold">
+                  <p className="text-3xl text-black font-bold mb-2">
                     拍照生成专属个性化图片
                   </p>
+                  <p className="text-xl text-black font-bold opacity-90">
+                    开发者大会专属AI体验
+                  </p>
                 </div>
-                <div className="bg-white p-8 border-8 border-black inline-block transform transition-all duration-700 animate-slide-in-left">
-                  <img 
-                    src="/qr-code.png" 
-                    alt="QR Code"
-                    className="w-48 h-48 mx-auto"
-                  />
+                
+                {/* 二维码和操作指南 */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                  {/* 二维码 */}
+                  <div className="bg-white p-8 border-8 border-black transform transition-all duration-700 animate-slide-in-left">
+                    <img 
+                      src="/qr-code.png" 
+                      alt="QR Code"
+                      className="w-64 h-64 mx-auto mb-4"
+                    />
+                    <p className="text-lg font-bold text-black">
+                      扫描上方二维码开始拍照
+                    </p>
+                  </div>
+                  
+                  {/* 操作步骤 */}
+                  <div className="bg-[#FC6A59] p-8 border-8 border-black transform transition-all duration-700 animate-slide-in-right text-left">
+                    <h3 className="text-3xl font-bold text-black mb-6 text-center">操作步骤</h3>
+                    <div className="space-y-4 text-xl font-bold text-black">
+                      <div className="flex items-center">
+                        <span className="bg-black text-[#FC6A59] w-10 h-10 rounded-full flex items-center justify-center mr-4 text-lg">1</span>
+                        用手机扫描左侧二维码
+                      </div>
+                      <div className="flex items-center">
+                        <span className="bg-black text-[#FC6A59] w-10 h-10 rounded-full flex items-center justify-center mr-4 text-lg">2</span>
+                        打开相机拍摄你的照片
+                      </div>
+                      <div className="flex items-center">
+                        <span className="bg-black text-[#FC6A59] w-10 h-10 rounded-full flex items-center justify-center mr-4 text-lg">3</span>
+                        选择AI风格或保持原样
+                      </div>
+                      <div className="flex items-center">
+                        <span className="bg-black text-[#FC6A59] w-10 h-10 rounded-full flex items-center justify-center mr-4 text-lg">4</span>
+                        等待照片在大屏幕展示
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* 底部提示 */}
+                <div className="mt-8 bg-black p-4 border-4 border-white">
+                  <p className="text-2xl font-bold text-[#FFC837] animate-pulse">
+                    📱 快来创造你的专属卡通形象吧！
+                  </p>
                 </div>
               </div>
             </div>
@@ -254,6 +314,27 @@ export default function DisplayApp() {
 
   return (
     <div className="min-h-screen bg-[#FFC837] flex flex-col relative">
+      {/* 背景音乐 - 所有模式都播放 */}
+      <audio 
+        key={currentAudioIndex}
+        autoPlay 
+        muted={false}
+        volume={0.3}
+        style={{ display: 'none' }}
+        onEnded={() => setCurrentAudioIndex(prev => (prev + 1) % audioFiles.length)}
+      >
+        <source src={`/${audioFiles[currentAudioIndex]}`} type="audio/mpeg" />
+      </audio>
+      
+      {/* 点击启动音频 */}
+      <div 
+        className="fixed top-0 left-0 w-full h-full z-0 pointer-events-none"
+        onClick={() => {
+          const audio = document.querySelector('audio') as HTMLAudioElement
+          if (audio) audio.play().catch(() => {})
+        }}
+        style={{ pointerEvents: 'auto' }}
+      />
       {/* 快捷键提示 - 左上角浮动，15秒后自动隐藏 */}
       {showShortcuts ? (
         <div className="fixed top-4 left-4 z-50 animate-fade-in">

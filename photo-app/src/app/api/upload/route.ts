@@ -5,6 +5,20 @@ import { PhotoService } from '@/lib/db-operations'
 
 const photoService = new PhotoService()
 
+// 构建优化的AI prompt
+function buildOptimizedPrompt(userCaption: string): string {
+  // 基础的杭州GOSIM开源主题prompt
+  const basePrompt = "卡通风格，GOSIM开发者大会风格，杭州科技氛围，开源精神体现，现代简洁设计"
+  
+  if (!userCaption || userCaption.trim() === '') {
+    // 如果用户没有输入，使用增强的默认prompt
+    return `${basePrompt}，专业程序员形象，科技感十足，代码元素背景，体现开发者气质和创新精神`
+  }
+  
+  // 如果用户有输入，结合用户需求和主题
+  return `${userCaption}，${basePrompt}，结合GOSIM大会特色，突出开源社区氛围`
+}
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
@@ -63,7 +77,7 @@ export async function POST(request: NextRequest) {
           },
           body: JSON.stringify({
             model_name: 'qwen-image-edit',
-            prompt: caption || '生成可爱的卡通形象',
+            prompt: buildOptimizedPrompt(caption),
             base_image_url: `http://localhost:8080${originalUrl}`
           })
         })
