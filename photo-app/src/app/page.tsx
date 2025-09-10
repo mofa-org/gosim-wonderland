@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
+import dynamic from "next/dynamic";
 import {
   Camera,
   RotateCcw,
@@ -14,10 +15,11 @@ import {
 import { generateSessionId } from "@/lib/utils";
 import { Photo } from "@/lib/types";
 
-export default function PhotoApp() {
+function PhotoApp() {
   const [step, setStep] = useState<
     | "welcome"
     | "camera"
+    | "camera_loading"
     | "preview"
     | "caption"
     | "uploading"
@@ -29,7 +31,13 @@ export default function PhotoApp() {
   const [uploadedPhoto, setUploadedPhoto] = useState<Photo | null>(null);
   const [error, setError] = useState<string>("");
   const [caption, setCaption] = useState<string>("");
-  const [userSession] = useState(() => generateSessionId());
+  const [userSession, setUserSession] = useState<string>("");
+  const [isVideoReady, setIsVideoReady] = useState<boolean>(false);
+
+  useEffect(() => {
+    // 在客户端生成sessionId，避免SSR不匹配
+    setUserSession(generateSessionId());
+  }, []);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -38,34 +46,140 @@ export default function PhotoApp() {
 
   const startCamera = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user", width: 800, height: 600 },
-      });
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        streamRef.current = stream;
+      // 清理之前的stream
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
       }
 
+      console.log("开始请求摄像头权限...");
+
+      // 先切换到camera状态，让video元素渲染
       setStep("camera");
+      setIsVideoReady(false);
+
+      // 获取摄像头流
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: "user",
+          width: { ideal: 800 },
+          height: { ideal: 600 },
+        },
+        audio: false,
+      });
+
+      console.log("摄像头权限获取成功", stream);
+      streamRef.current = stream;
+
+      // 使用setInterval等待video元素渲染完成
+      const waitForVideo = () => {
+        return new Promise<HTMLVideoElement>((resolve, reject) => {
+          let attempts = 0;
+          const maxAttempts = 50; // 5秒超时
+
+          const checkVideo = () => {
+            if (videoRef.current) {
+              console.log("找到video元素");
+              resolve(videoRef.current);
+            } else if (attempts >= maxAttempts) {
+              reject(new Error("等待视频元素超时"));
+            } else {
+              attempts++;
+              setTimeout(checkVideo, 100);
+            }
+          };
+
+          checkVideo();
+        });
+      };
+
+      const video = await waitForVideo();
+      video.srcObject = stream;
+
+      // 等待视频准备就绪
+      await new Promise<void>((resolve, reject) => {
+        const onLoadedMetadata = () => {
+          console.log("视频元数据加载完成");
+          video
+            .play()
+            .then(() => {
+              console.log("视频开始播放成功");
+              setIsVideoReady(true);
+              resolve();
+            })
+            .catch((playError) => {
+              console.error("视频播放失败:", playError);
+              reject(playError);
+            });
+        };
+
+        const onError = (error: Event) => {
+          console.error("视频元素错误:", error);
+          reject(new Error("视频元素加载失败"));
+        };
+
+        // 添加事件监听器
+        video.addEventListener("loadedmetadata", onLoadedMetadata, {
+          once: true,
+        });
+        video.addEventListener("error", onError, { once: true });
+
+        // 5秒超时
+        setTimeout(() => {
+          video.removeEventListener("loadedmetadata", onLoadedMetadata);
+          video.removeEventListener("error", onError);
+          reject(new Error("视频加载超时"));
+        }, 5000);
+      });
     } catch (error) {
-      setError("无法访问摄像头，请检查权限设置");
+      console.error("摄像头启动失败:", error);
+
+      // 清理资源
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+      }
+
+      setError(
+        `无法启动摄像头：${error instanceof Error ? error.message : "未知错误"}`,
+      );
       setStep("error");
     }
   }, []);
 
   const capturePhoto = useCallback(() => {
-    if (!videoRef.current || !canvasRef.current) return;
+    if (!videoRef.current || !canvasRef.current || !isVideoReady) {
+      console.error("视频未准备就绪，无法拍照");
+      return;
+    }
 
     const canvas = canvasRef.current;
     const video = videoRef.current;
-    const context = canvas.getContext("2d")!;
+    const context = canvas.getContext("2d");
+
+    if (!context) {
+      console.error("无法获取canvas context");
+      return;
+    }
+
+    // 确保视频有尺寸
+    if (video.videoWidth === 0 || video.videoHeight === 0) {
+      console.error("视频尺寸无效", {
+        width: video.videoWidth,
+        height: video.videoHeight,
+      });
+      return;
+    }
 
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
 
-    context.drawImage(video, 0, 0);
+    // 水平翻转画布（因为前置摄像头）
+    context.scale(-1, 1);
+    context.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+
     const imageData = canvas.toDataURL("image/jpeg", 0.8);
+    console.log("拍照成功，图片大小:", imageData.length);
 
     setCapturedImage(imageData);
 
@@ -74,9 +188,10 @@ export default function PhotoApp() {
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
+    setIsVideoReady(false);
 
     setStep("preview");
-  }, []);
+  }, [isVideoReady]);
 
   const retakePhoto = useCallback(() => {
     setCapturedImage(null);
@@ -84,7 +199,7 @@ export default function PhotoApp() {
   }, [startCamera]);
 
   const uploadPhoto = useCallback(async () => {
-    if (!capturedImage) return;
+    if (!capturedImage || !userSession) return;
 
     setStep("uploading");
 
@@ -207,7 +322,7 @@ export default function PhotoApp() {
         {/* Header */}
         <div className="bg-[#6DCACE] p-6 text-center border-b-4 border-black">
           <h1 className="text-2xl font-bold text-black">GOSIM Wonderland</h1>
-          <p className="text-black mt-2">拍照生成专属卡通头像</p>
+          <p className="text-black mt-2">拍照生成专属个性化图片</p>
         </div>
 
         {/* Content */}
@@ -222,7 +337,7 @@ export default function PhotoApp() {
                   选择图片方式
                 </h2>
                 <p className="text-black">
-                  拍照或上传图片，我们会为您生成可爱的卡通头像！
+                  拍照或上传图片，我们会为您生成可爱的卡通形象！
                 </p>
               </div>
               <div className="space-y-4">
@@ -251,6 +366,22 @@ export default function PhotoApp() {
             </div>
           )}
 
+          {step === "camera_loading" && (
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 mx-auto relative animate-spin">
+                <div className="absolute top-0 left-0 w-8 h-8 bg-[#6DCACE]"></div>
+                <div className="absolute top-0 right-0 w-8 h-8 bg-[#FFC837]"></div>
+                <div className="absolute bottom-0 left-0 w-8 h-8 bg-[#FC6A59]"></div>
+                <div className="absolute bottom-0 right-0 w-8 h-8 bg-[#6ECACD]"></div>
+                <div className="absolute inset-2 bg-white"></div>
+              </div>
+              <div className="bg-[#6DCACE] p-4 border-4 border-black">
+                <h3 className="text-lg font-bold text-black">启动摄像头</h3>
+                <p className="text-black font-bold">正在准备拍照环境...</p>
+              </div>
+            </div>
+          )}
+
           {step === "camera" && (
             <div className="space-y-4">
               <div className="relative aspect-[4/3] bg-black border-4 border-black">
@@ -258,15 +389,23 @@ export default function PhotoApp() {
                   ref={videoRef}
                   autoPlay
                   playsInline
+                  muted
+                  controls={false}
                   className="w-full h-full object-cover"
+                  style={{ transform: "scaleX(-1)" }}
                 />
               </div>
               <button
                 onClick={capturePhoto}
-                className="w-full bg-[#FFC837] text-black py-4 px-6 border-4 border-black font-bold hover:bg-black hover:text-[#FFC837] transition-colors duration-200 flex items-center justify-center space-x-2"
+                disabled={!isVideoReady}
+                className={`w-full py-4 px-6 border-4 border-black font-bold transition-colors duration-200 flex items-center justify-center space-x-2 ${
+                  isVideoReady
+                    ? "bg-[#FFC837] text-black hover:bg-black hover:text-[#FFC837]"
+                    : "bg-gray-400 text-gray-600 cursor-not-allowed"
+                }`}
               >
                 <Camera className="w-5 h-5" />
-                <span>拍照</span>
+                <span>{isVideoReady ? "拍照" : "准备中..."}</span>
               </button>
             </div>
           )}
@@ -318,23 +457,27 @@ export default function PhotoApp() {
                 <div className="grid grid-cols-2 gap-3 mb-4">
                   {[
                     {
-                      label: "可爱萌系",
-                      value: "可爱萌系风格，大眼睛，Q版比例，粉色系配色",
+                      label: "科技极客",
+                      value:
+                        "科技感十足的卡通风格，突出程序员气质，代码元素背景，现代简洁",
                       color: "#FFC837",
                     },
                     {
-                      label: "酷炫潮流",
-                      value: "酷炫街头风格，墨镜，潮流服装，炫酷表情",
+                      label: "专业商务",
+                      value:
+                        "专业会议风格，正式但有趣，保持职场精英形象，商务色调",
                       color: "#FC6A59",
                     },
                     {
-                      label: "温柔治愈",
-                      value: "温柔治愈风格，柔和色彩，甜美笑容，温暖氛围",
+                      label: "创新活力",
+                      value:
+                        "充满创新活力的风格，年轻化表达，鲜明色彩，体现开发者激情",
                       color: "#6ECACD",
                     },
                     {
-                      label: "二次元",
-                      value: "日式动漫风格，精致线条，鲜艳色彩，动漫特征",
+                      label: "简约现代",
+                      value:
+                        "简约现代的卡通风格，线条清晰，色彩和谐，突出科技会议氛围",
                       color: "#6DCACE",
                     },
                   ].map((preset) => (
@@ -361,7 +504,7 @@ export default function PhotoApp() {
                   id="caption"
                   value={caption}
                   onChange={(e) => setCaption(e.target.value)}
-                  placeholder="例如：cyberpunk风格，紫色头发，戴着科技眼镜，未来感背景，霓虹灯效果..."
+                  placeholder="例如：程序员卡通形象，戴着程序员帽，背景有代码屏幕，科技蓝色调，体现GOSIM大会氛围..."
                   className="w-full p-4 border-4 border-black resize-none bg-white text-black focus:outline-none focus:bg-[#FFC837] text-sm font-medium"
                   rows={4}
                   maxLength={300}
@@ -393,7 +536,7 @@ export default function PhotoApp() {
                   onClick={uploadPhoto}
                   className="bg-[#FFC837] text-black py-4 px-4 border-4 border-black font-bold hover:bg-black hover:text-[#FFC837] transition-colors"
                 >
-                  生成头像
+                  生成卡通
                 </button>
               </div>
             </div>
@@ -426,7 +569,7 @@ export default function PhotoApp() {
               </div>
               <div className="bg-[#FFC837] p-4 border-4 border-black">
                 <h3 className="text-lg font-bold text-black">AI处理中</h3>
-                <p className="text-black font-bold">正在为您生成专属卡通头像</p>
+                <p className="text-black font-bold">正在为您生成专属卡通形象</p>
               </div>
             </div>
           )}
@@ -440,7 +583,7 @@ export default function PhotoApp() {
               <div className="aspect-square bg-white border-4 border-black">
                 <img
                   src={uploadedPhoto.cartoon_url}
-                  alt="卡通头像"
+                  alt="卡通形象"
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -507,3 +650,6 @@ export default function PhotoApp() {
     </div>
   );
 }
+
+// 禁用SSR以避免水合错误
+export default dynamic(() => Promise.resolve(PhotoApp), { ssr: false });

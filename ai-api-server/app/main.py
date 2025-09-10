@@ -67,7 +67,7 @@ def generate_image(request: dict):
     """生成卡通图片"""
     try:
         model_name = request.get("model_name", "qwen-image-edit")
-        prompt = request.get("prompt", "生成可爱的卡通头像")
+        prompt = request.get("prompt", "生成可爱的卡通形象")
         base_image_url = request.get("base_image_url")
 
         if not base_image_url:
@@ -122,13 +122,30 @@ def generate_image(request: dict):
             #     print(f"本地文件上传错误: {e}")
             #     raise HTTPException(status_code=500, detail=f"文件上传失败: {str(e)}")
 
+        # 构建智能prompt，根据用户需求生成合适的指令
+        user_prompt = prompt if prompt and prompt.strip() else "生成可爱的卡通风格"
+        
+        # 专为开发者会议场景优化的卡通化指令
+        base_instruction = f"""用户需求：{user_prompt}
+
+请将参考图中的内容按照用户需求重新绘制为卡通风格，适用于开发者会议场景：
+1. 如果是人物：保持面部特征、发型、服装等个人识别要素，突出开发者/参会者的专业形象
+2. 如果是会场场景：保持会议室布局、演讲台、投影屏幕、座椅排列等空间特征
+3. 如果是技术展示：保持代码界面、设备外观、屏幕内容等科技元素的可识别性
+4. 采用卡通化表现手法：线条清晰流畅，色彩鲜明饱和，风格统一现代
+5. 融入GOSIM开发者大会的氛围元素：科技感、创新感、专业感
+6. 背景可适当融入杭州科技园区或会议场馆的特色，但保持简洁不抢夺主体
+7. 避免添加文字、水印、多余装饰，保持专业简洁
+
+最终效果要求：既有卡通趣味性又保持技术会议的专业感，色彩和谐，构图完整。"""
+
         # 调用通义万相API
         messages = [
             {
                 "role": "user",
                 "content": [
                     {"image": base_image_url},
-                    {"text": f"用户需求：{prompt}。请将参考图中的主角按照用户需求重新绘制，采用卡通风格，保持人物特征，线条清晰，颜色鲜明,要有GOSIM大会的元素"}
+                    {"text": base_instruction}
                 ]
             }
         ]

@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
         },
         body: JSON.stringify({
           model_name: 'qwen-image-edit',
-          prompt: caption || '生成可爱的卡通头像',
+          prompt: caption || '生成可爱的卡通形象',
           base_image_url: `http://localhost:8080${originalUrl}`
         })
       })
