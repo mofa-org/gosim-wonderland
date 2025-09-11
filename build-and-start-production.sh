@@ -15,9 +15,14 @@ if ! command -v python3 >/dev/null 2>&1; then
 fi
 
 echo "🛑 停止现有服务..."
-pkill -f "node.*3004\|node.*8080\|node.*8081\|node.*8082" || true
+pkill -f "node.*80\|node.*8081\|node.*8082" || true
 pkill -f "uvicorn.*8000" || true
+pkill -f "static_server.py" || true
 sleep 3
+
+echo "🧹 清理旧依赖..."
+rm -rf photo-app/node_modules display-app/node_modules admin-panel/node_modules
+rm -rf photo-app/.next display-app/.next admin-panel/.next
 
 echo "📁 创建必要目录..."
 mkdir -p original-photos ai-photos data logs
@@ -62,7 +67,7 @@ cd ..
 sleep 3
 
 # 启动Next.js应用 - 绑定到所有IP
-echo "📱 启动Photo App (端口 8080)..."
+echo "📱 启动Photo App (端口 80)..."
 cd photo-app
 PORT=80 HOSTNAME=0.0.0.0 nohup npm start > ../logs/photo-app.log 2>&1 &
 cd ..
@@ -82,15 +87,17 @@ cd ..
 
 echo ""
 echo "🎉 所有服务已启动!"
-echo "🤖 AI后端: http://localhost:8000"
-echo "📱 用户端: http://localhost:8080"
-echo "📺 展示端: http://localhost:8081"
-echo "⚙️ 管理端: http://localhost:8082"
+echo "🤖 AI主服务: http://localhost:8000 (业务接口)"
+echo "🗂️ AI静态服务: http://localhost:8080 (供阿里云访问)"
+echo "📱 用户端: http://localhost:80 (Photo App)"
+echo "📺 展示端: http://localhost:8081 (Display App)"
+echo "⚙️ 管理端: http://localhost:8082 (Admin Panel)"
 echo ""
 echo "📋 日志文件:"
-echo "- AI服务器: logs/ai-server.log"
+echo "- AI主服务器: logs/ai-server.log"
+echo "- AI静态服务: logs/ai-static.log"
 echo "- 用户端: logs/photo-app.log"
 echo "- 展示端: logs/display-app.log"
 echo "- 管理端: logs/admin-panel.log"
 echo ""
-echo "💡 停止服务: pkill -f 'node.*808\|uvicorn.*8000'"
+echo "💡 停止服务: pkill -f 'node.*80\|node.*8081\|node.*8082\|uvicorn.*8000\|static_server.py'"
