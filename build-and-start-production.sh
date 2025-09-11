@@ -14,6 +14,47 @@ if ! command -v python3 >/dev/null 2>&1; then
     exit 1
 fi
 
+# 检查Git
+if ! command -v git >/dev/null 2>&1; then
+    echo "❌ Git未安装"
+    exit 1
+fi
+
+echo "🗑️ 清理旧项目..."
+cd ..
+rm -rf gosim-wonderland
+
+echo "🔑 配置阿里云API密钥..."
+read -p "请输入你的阿里云DashScope API Key: " DASHSCOPE_API_KEY
+
+echo "📥 克隆最新代码..."
+git clone git@github.com:mofa-org/gosim-wonderland.git
+cd gosim-wonderland
+
+echo "⚙️ 配置环境变量..."
+mkdir -p ai-api-server
+cat > ai-api-server/.env << EOF
+DASHSCOPE_API_KEY=$DASHSCOPE_API_KEY
+EOF
+echo "✅ API Key已保存到 ai-api-server/.env"
+echo ""
+
+# 询问用户选择
+echo "请选择操作："
+echo "1) 继续构建和部署服务"
+echo "2) 重启服务器"
+read -p "请输入选择 (1 或 2): " USER_CHOICE
+
+if [ "$USER_CHOICE" = "2" ]; then
+    echo "🔄 重启服务器中..."
+    sudo reboot now
+    exit 0
+elif [ "$USER_CHOICE" = "1" ]; then
+    echo "🚀 继续构建和部署..."
+else
+    echo "❌ 无效选择，默认继续构建..."
+fi
+
 echo "🛑 停止现有服务..."
 pkill -f "node.*80\|node.*8081\|node.*8082" || true
 pkill -f "uvicorn.*8000" || true
@@ -101,3 +142,5 @@ echo "- 展示端: logs/display-app.log"
 echo "- 管理端: logs/admin-panel.log"
 echo ""
 echo "💡 停止服务: pkill -f 'node.*80\|node.*8081\|node.*8082\|uvicorn.*8000\|static_server.py'"
+echo ""
+echo "🎉 部署完成！所有服务已启动并运行在后台。"
