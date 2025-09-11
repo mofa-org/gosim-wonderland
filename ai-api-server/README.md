@@ -1,6 +1,8 @@
-# Model Runner API
+# GOSIM Wonderland AI API Server
 
-This project is a FastAPI-based server for running various image generation models.
+AI服务器，负责调用阿里云通义万相生成卡通图片。包含两个服务：
+- 主API服务 (8000端口): 业务接口
+- 静态文件服务 (8080端口): 供阿里云访问原始图片
 
 ## Setup
 
@@ -29,9 +31,20 @@ This project is a FastAPI-based server for running various image generation mode
 
 ## Running the Server
 
-To run the application, use uvicorn:
+使用启动脚本启动两个服务：
 ```bash
-uvicorn app.main:app --reload
+./start-ai-server.sh
 ```
 
-The API will be available at `http://127.0.0.1:8000`.
+或手动启动：
+```bash
+# 启动静态文件服务 (8080端口)
+python3 static_server.py &
+
+# 启动主API服务 (8000端口)  
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+服务地址：
+- 主API: `http://127.0.0.1:8000` (业务接口)
+- 静态文件: `http://127.0.0.1:8080` (供阿里云访问图片)

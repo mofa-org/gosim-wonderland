@@ -4,39 +4,42 @@ import uuid
 import requests
 from dashscope import MultiModalConversation
 from dotenv import load_dotenv
+from urllib.parse import urlparse
 
 load_dotenv()
 
 app = FastAPI(title="GOSIM Wonderland AI Service")
 
-PICGO_API_KEY = os.getenv("PICGO_API_KEY", "chv_SRYm7_d0bb9dda7dea5abe1451c8c5a1b38531bff31f3702fc8de3555f93fe95b9fb801fdebc7a509633f1f6a1b41b320cba398ff80ced0c2b545ff107ce7bc519273d")
+# 定义目录路径
 AI_PHOTOS_DIR = "../ai-photos"
+ORIGINAL_PHOTOS_DIR = "../original-photos-cache"
 
-def upload_to_picgo(image_url: str) -> str:
-    """上传图片到PicGo图床"""
+# 创建目录
+os.makedirs(AI_PHOTOS_DIR, exist_ok=True)  
+os.makedirs(ORIGINAL_PHOTOS_DIR, exist_ok=True)
+
+
+def download_and_cache_original_image(url: str) -> str:
+    """下载原始图片并缓存到本地，返回公网可访问的URL"""
     try:
-        image_response = requests.get(image_url, timeout=10)
-        image_response.raise_for_status()
-
-        files = {'source': ('image.jpg', image_response.content, 'image/jpeg')}
-        headers = {'X-API-Key': PICGO_API_KEY}
-
-        upload_response = requests.post(
-            'https://www.picgo.net/api/1/upload',
-            headers=headers,
-            files=files,
-            timeout=30
-        )
-
-        if upload_response.status_code == 200:
-            result = upload_response.json()
-            return result['image']['url']
-        else:
-            print(f"图床上传失败: {upload_response.text}")
-            return image_url
+        response = requests.get(url, timeout=30)
+        response.raise_for_status()
+        
+        # 生成唯一文件名
+        unique_id = uuid.uuid4()
+        file_extension = ".jpg"  # 默认jpg，也可以从原始URL提取
+        file_name = f"original_{unique_id}{file_extension}"
+        file_path = os.path.join(ORIGINAL_PHOTOS_DIR, file_name)
+        
+        # 保存原始图片
+        with open(file_path, "wb") as f:
+            f.write(response.content)
+        
+        # 返回8080端口可访问的URL
+        return f"http://us.liyao.space:8080/original-images/{file_name}"
     except Exception as e:
-        print(f"图床上传错误: {e}")
-        return image_url
+        print(f"下载原始图片失败: {e}")
+        return url
 
 def save_image_from_url(url: str) -> str:
     """从URL下载图片并保存到本地"""
@@ -92,35 +95,13 @@ def generate_image(request: dict):
 
             return {"status": "success", "image_paths": [f"/ai-photos/{file_name}"]}
 
-        # 如果是本地URL，转换为公网可访问URL
+        # 如果是本地URL，下载并缓存到AI服务器，返回8080端口URL
         if base_image_url.startswith(('http://localhost:', 'http://127.0.0.1:')):
-            print(f"本地图片URL: {base_image_url}")
-            # 将localhost替换为公网域名
-            public_url = base_image_url.replace('http://localhost:80', 'http://us.liyao.space:80')
-            print(f"公网URL: {public_url}")
+            print(f"本地图片URL: {base_image_url}，正在下载并缓存...")
+            # 下载原始图片并保存到AI服务器，返回8080端口可访问的URL
+            public_url = download_and_cache_original_image(base_image_url)
+            print(f"AI服务器图片URL: {public_url}")
             base_image_url = public_url
-                    # files = {'source': (unique_filename, f.read(), 'image/jpeg')}
-                    # headers = {'X-API-Key': PICGO_API_KEY}
-
-                    # upload_response = requests.post(
-                    #     'https://www.picgo.net/api/1/upload',
-                    #     headers=headers,
-                    #     files=files,
-                    #     timeout=30
-                    # )
-
-                    # if upload_response.status_code == 200:
-                    #     result = upload_response.json()
-                    #     base_image_url = result['image']['url']
-                    #     print(f"图床URL: {base_image_url}")
-                    # else:
-                    #     print(f"图床上传失败: {upload_response.text}")
-                    #     raise HTTPException(status_code=500, detail="图床上传失败")
-            # except FileNotFoundError:
-            #     raise HTTPException(status_code=400, detail=f"找不到本地文件: {local_file_path}")
-            # except Exception as e:
-            #     print(f"本地文件上传错误: {e}")
-            #     raise HTTPException(status_code=500, detail=f"文件上传失败: {str(e)}")
 
         # 构建智能prompt，根据用户需求生成合适的指令
         user_prompt = prompt if prompt and prompt.strip() else "生成可爱的卡通风格"

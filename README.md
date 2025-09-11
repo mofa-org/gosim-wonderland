@@ -7,7 +7,7 @@ GOSIM Wonderland 是一个为大会/活动设计的互动体验系统，用户�
 ## 功能特色
 
 - - **双重图片输入方式**：支持拍照或上传图片
-- - **AI卡通化处理**：使用OpenAI GPT-4 Vision + DALL-E 3
+- - **AI卡通化处理**：使用阿里云通义万相
 - - **三端系统架构**：用户端、展示端、管理端
 - - **实时更新**：Server-Sent Events实时同步
 - - **内容审核**：人工审核确保内容质量
@@ -15,11 +15,12 @@ GOSIM Wonderland 是一个为大会/活动设计的互动体验系统，用户�
 
 ## 系统架构
 
-### 三个独立应用
+### 四个独立应用
 
-1. **Photo-app** (用户端) - 拍照/上传图片
-2. **Display-app** (展示端) - 大屏实时展示
-3. **Admin-panel** (管理端) - 内容审核管理
+1. **Photo-app** (用户端) - 拍照/上传图片 (端口80)
+2. **Display-app** (展示端) - 大屏实时展示 (端口8081)
+3. **Admin-panel** (管理端) - 内容审核管理 (端口8082)  
+4. **AI-api-server** (AI服务) - 调用阿里云通义万相 (端口8000+8080)
 
 ### 技术栈
 
@@ -27,7 +28,7 @@ GOSIM Wonderland 是一个为大会/活动设计的互动体验系统，用户�
 - **后端**: Next.js API Routes
 - **数据库**: SQLite (better-sqlite3)
 - **文件存储**: 本地文件系统
-- **AI处理**: OpenAI GPT-4 Vision + DALL-E 3
+- **AI处理**: 阿里云通义万相 (Python FastAPI)
 - **实时更新**: Server-Sent Events
 - **测试**: Jest + Testing Library
 
@@ -49,33 +50,41 @@ cd ../admin-panel && npm install
 
 ### 配置环境变量
 
-在每个应用目录下创建 `.env.local` 文件：
+在AI服务器目录下创建 `.env` 文件：
 
 ```bash
-# photo-app/.env.local
-OPENAI_API_KEY=your_openai_api_key_here
-ADMIN_PASSWORD=wonderland_admin_2024
+# ai-api-server/.env
+DASHSCOPE_API_KEY=your_dashscope_api_key_here
 ```
 
 ### 启动应用
 
+开发环境：
 ```bash
-# 启动用户拍照端 (端口 3000)
-cd photo-app && npm run dev
+# 启动AI服务器
+./start-ai-server.sh
 
-# 启动大屏展示端 (端口 3002)  
-cd display-app && npm run dev -- --port 3002
+# 启动用户拍照端 (端口 80)
+./start-photo-app.sh  
 
-# 启动管理审核后台 (端口 3003)
-cd admin-panel && npm run dev -- --port 3003
+# 启动大屏展示端 (端口 8081)
+./start-display-app.sh
+
+# 启动管理审核后台 (端口 8082)
+./start-admin-panel.sh
+```
+
+生产环境：
+```bash
+./build-and-start-production.sh
 ```
 
 ## - 使用流程
 
-1. **用户操作**: 访问 `http://localhost:3000` 拍照或上传图片
-2. **AI处理**: 系统自动生成卡通头像
-3. **内容审核**: 管理员在 `http://localhost:3003` 审核内容
-4. **大屏展示**: 审核通过的图片在 `http://localhost:3002` 展示
+1. **用户操作**: 访问 `http://localhost:80` 拍照或上传图片
+2. **AI处理**: 系统调用阿里云通义万相生成卡通头像
+3. **内容审核**: 管理员在 `http://localhost:8082` 审核内容
+4. **大屏展示**: 审核通过的图片在 `http://localhost:8081` 展示
 
 ## - 测试
 
@@ -131,9 +140,12 @@ cd ../admin-panel && npm start
 
 ## - 配置说明
 
-### OpenAI API 配置
+### 阿里云API 配置
 
-项目使用 OpenAI GPT-4 Vision 分析图片特征，然后用 DALL-E 3 生成卡通化图像。需要有效的 OpenAI API 密钥。
+项目使用阿里云通义万相进行图片卡通化处理。需要有效的 DashScope API 密钥。
+
+- AI主服务: http://localhost:8000 (业务接口)
+- AI静态服务: http://localhost:8080 (供阿里云访问图片)
 
 ### 文件存储
 
@@ -149,8 +161,9 @@ cd ../admin-panel && npm start
 
 ## - 注意事项
 
-- 确保有足够的OpenAI API配额
-- 定期清理上传的图片文件
+- 确保有足够的阿里云DashScope API配额
+- 开放8080端口供阿里云访问图片
+- 定期清理上传和缓存的图片文件
 - 监控服务器存储空间
 - 设置合理的图片大小限制
 

@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
           body: JSON.stringify({
             model_name: 'qwen-image-edit',
             prompt: buildOptimizedPrompt(caption),
-            base_image_url: `http://localhost:8080${originalUrl}`
+            base_image_url: `http://localhost:80${originalUrl}`
           })
         })
         

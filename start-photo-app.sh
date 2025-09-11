@@ -12,8 +12,8 @@ if [ ! -d "node_modules" ]; then
 fi
 
 echo "🛑 检查并停止现有服务..."
-pkill -f "next.*8080" || true
+pkill -f "next.*80" || true
 sleep 2
 
-echo "🚀 启动Photo App (端口 8080)..."
+echo "🚀 启动Photo App (端口 80)..."
 npm run dev

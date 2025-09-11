@@ -5,37 +5,9 @@ from dashscope.api_entities.dashscope_response import ImageSynthesisResponse, Vi
 import requests
 import pathlib
 import json
+import uuid
 
-PICGO_API_KEY = os.getenv("PICGO_API_KEY", "chv_SRYm7_d0bb9dda7dea5abe1451c8c5a1b38531bff31f3702fc8de3555f93fe95b9fb801fdebc7a509633f1f6a1b41b320cba398ff80ced0c2b545ff107ce7bc519273d")
 
-def upload_to_picgo(image_url: str) -> str:
-    """将图片上传到PicGo图床，返回公网可访问的URL"""
-    try:
-        # 下载原图片
-        image_response = requests.get(image_url)
-        image_response.raise_for_status()
-        
-        # 上传到图床
-        files = {'source': ('image.jpg', image_response.content, 'image/jpeg')}
-        headers = {'X-API-Key': PICGO_API_KEY}
-        
-        upload_response = requests.post(
-            'https://www.picgo.net/api/1/upload',
-            headers=headers,
-            files=files
-        )
-        upload_response.raise_for_status()
-        
-        result = upload_response.json()
-        if result.get('status_code') == 200 and result.get('image', {}).get('url'):
-            return result['image']['url']
-        else:
-            print(f"图床上传失败: {result}")
-            return image_url
-            
-    except Exception as e:
-        print(f"图床上传错误: {e}")
-        return image_url
 
 def call_tongyi_wanxiang(prompt: str, base_image_url: str = None, n: int = 1, api_key: str = None) -> ImageSynthesisResponse:
     """
@@ -133,12 +105,37 @@ def call_tongyi_qianwen_image_edit(prompt: str, base_image_url: str = None, n: i
             })()
         })()
 
-    # 如果是本地URL，先上传到图床获取公网URL
+    # 如果是本地URL，下载并缓存到AI服务器，返回8080端口URL  
     if base_image_url and (base_image_url.startswith('http://localhost:') or base_image_url.startswith('http://127.0.0.1:')):
-        print(f"本地图片URL detected: {base_image_url}, 上传到图床...")
-        public_url = upload_to_picgo(base_image_url)
-        print(f"图床URL: {public_url}")
-        base_image_url = public_url
+        print(f"本地图片URL detected: {base_image_url}, 正在下载并缓存...")
+        
+        try:
+            # 下载原始图片
+            response = requests.get(base_image_url, timeout=30)
+            response.raise_for_status()
+            
+            # 生成唯一文件名
+            unique_id = uuid.uuid4()
+            file_extension = ".jpg"
+            file_name = f"original_{unique_id}{file_extension}"
+            
+            # 保存到缓存目录
+            cache_dir = "../original-photos-cache"
+            os.makedirs(cache_dir, exist_ok=True)
+            file_path = os.path.join(cache_dir, file_name)
+            
+            with open(file_path, "wb") as f:
+                f.write(response.content)
+            
+            # 返回8080端口可访问的URL
+            public_url = f"http://us.liyao.space:8080/original-images/{file_name}"
+            print(f"AI服务器图片URL: {public_url}")
+            base_image_url = public_url
+            
+        except Exception as e:
+            print(f"下载原始图片失败: {e}, 使用原始URL")
+            # 如果下载失败，还是尝试直接替换
+            base_image_url = base_image_url.replace('http://localhost:', 'http://us.liyao.space:').replace('http://127.0.0.1:', 'http://us.liyao.space:')
 
     # 构建智能prompt，根据用户需求生成合适的指令
     user_prompt = prompt if prompt and prompt.strip() else "生成可爱的卡通风格"

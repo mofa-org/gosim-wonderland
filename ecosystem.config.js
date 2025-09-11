@@ -2,44 +2,44 @@
 module.exports = {
   apps: [
     {
-      name: 'gosim-ai-server',
-      script: 'python3',
-      args: '-m uvicorn app.main:app --host 0.0.0.0 --port 8000',
-      cwd: './ai-api-server',
-      interpreter: 'none',
+      name: "gosim-ai-server",
+      script: "python3",
+      args: "-m uvicorn app.main:app --host 0.0.0.0 --port 8000",
+      cwd: "./ai-api-server",
+      interpreter: "none",
       env: {
-        NODE_ENV: 'production'
-      }
+        NODE_ENV: "production",
+      },
     },
     {
-      name: 'gosim-photo-app',
-      script: 'npm',
-      args: 'start',
-      cwd: './photo-app',
+      name: "gosim-photo-app",
+      script: "npm",
+      args: "start",
+      cwd: "./photo-app",
       env: {
-        NODE_ENV: 'production',
-        PORT: 8080
-      }
+        NODE_ENV: "production",
+        PORT: 80,
+      },
     },
     {
-      name: 'gosim-display-app',
-      script: 'npm',
-      args: 'start',
-      cwd: './display-app',
+      name: "gosim-display-app",
+      script: "npm",
+      args: "start",
+      cwd: "./display-app",
       env: {
-        NODE_ENV: 'production',
-        PORT: 8081
-      }
+        NODE_ENV: "production",
+        PORT: 8081,
+      },
     },
     {
-      name: 'gosim-admin-panel',
-      script: 'npm',
-      args: 'start',
-      cwd: './admin-panel',
+      name: "gosim-admin-panel",
+      script: "npm",
+      args: "start",
+      cwd: "./admin-panel",
       env: {
-        NODE_ENV: 'production',
-        PORT: 8082
-      }
-    }
-  ]
-}
+        NODE_ENV: "production",
+        PORT: 8082,
+      },
+    },
+  ],
+};
