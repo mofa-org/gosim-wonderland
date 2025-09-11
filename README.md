@@ -75,7 +75,7 @@ cd ../admin-panel && npm install
 
 ### 配置环境变量
 
-在AI服务器目录下创建 `.env` 文件：
+**只需要配置AI服务器**，其他应用无需环境变量：
 
 ```bash
 # ai-api-server/.env
@@ -83,7 +83,8 @@ DASHSCOPE_API_KEY=your_dashscope_api_key_here
 ```
 
 **注意**：
-- 如果没有API key，AI服务器会运行在Mock模式下，生成随机颜色的图片
+- photo-app、display-app、admin-panel 都不需要环境变量配置
+- 如果没有API key，AI服务器会运行在Mock模式下，生成随机颜色的图片  
 - Mock模式适合开发调试，不需要消耗API配额
 - 生产环境需要配置有效的DashScope API密钥
 

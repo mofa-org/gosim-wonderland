@@ -36,7 +36,19 @@ cd admin-panel && npm run build && cd ..
 
 echo "🚀 启动所有服务..."
 
-# 启动AI服务器
+# 启动AI静态文件服务器 (8080端口)
+echo "🗂️ 启动AI静态文件服务器 (端口 8080)..."
+cd ai-api-server
+if command -v python3.11 >/dev/null 2>&1; then
+    nohup python3.11 static_server.py > ../logs/ai-static.log 2>&1 &
+elif command -v python3 >/dev/null 2>&1; then
+    nohup python3 static_server.py > ../logs/ai-static.log 2>&1 &
+fi
+cd ..
+
+sleep 2
+
+# 启动AI主服务器 (8000端口)
 echo "🤖 启动AI API服务器 (端口 8000)..."
 cd ai-api-server
 if command -v python3.11 >/dev/null 2>&1; then
