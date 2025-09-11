@@ -48,6 +48,13 @@ function PhotoApp() {
 
   const startCamera = useCallback(async () => {
     try {
+      // 检查域名，如果是wonderland.mofa.ai则重定向到HTTPS域名
+      if (location.hostname === 'wonderland.mofa.ai') {
+        console.log('检测到wonderland.mofa.ai域名，重定向到HTTPS域名以支持摄像头功能');
+        window.location.href = `https://test.liyao.space${location.pathname}${location.search}`;
+        return;
+      }
+
       // 检查浏览器支持
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         throw new Error(
