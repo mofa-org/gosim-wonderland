@@ -512,7 +512,7 @@ function PhotoApp() {
             <div className="space-y-6">
               {/* AI风格定制选项 - 只在选择AI处理时显示 */}
               {useAI && (
-                <div className="bg-[#FFC837] p-4 border-4 border-black">
+                <div className="hidden bg-[#FFC837] p-4 border-4 border-black">
                   <h3 className="text-lg font-bold text-black mb-2 text-center">
                     AI风格定制
                   </h3>
@@ -606,7 +606,7 @@ function PhotoApp() {
 
               {/* AI处理选择 */}
               <div className="text-center space-y-4">
-                <div className="bg-[#FFC837] p-4 border-4 border-black">
+                <div className="hidden bg-[#FFC837] p-4 border-4 border-black">
                   <h3 className="text-xl font-bold text-black mb-2">
                     选择处理方式
                   </h3>
@@ -617,24 +617,22 @@ function PhotoApp() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <button
-                    onClick={() => setUseAI(true)}
-                    className={`p-4 border-4 border-black font-bold transition-colors ${
-                      useAI
-                        ? "bg-[#6DCACE] text-black"
-                        : "bg-white text-black hover:bg-[#6DCACE]"
-                    }`}
+                    onClick={() => {
+                      setUseAI(true);
+                      uploadPhoto();
+                    }}
+                    className="p-4 border-4 border-black font-bold transition-colors bg-[#6DCACE] text-black hover:bg-black hover:text-[#6DCACE]"
                   >
                     <div className="text-sm font-bold">AI卡通化</div>
                     <div className="text-xs mt-1">生成卡通风格</div>
                   </button>
 
                   <button
-                    onClick={() => setUseAI(false)}
-                    className={`p-4 border-4 border-black font-bold transition-colors ${
-                      !useAI
-                        ? "bg-[#6DCACE] text-black"
-                        : "bg-white text-black hover:bg-[#6DCACE]"
-                    }`}
+                    onClick={() => {
+                      setUseAI(false);
+                      uploadPhoto();
+                    }}
+                    className="p-4 border-4 border-black font-bold transition-colors bg-[#FC6A59] text-black hover:bg-black hover:text-[#FC6A59]"
                   >
                     <div className="text-sm font-bold">保持原样</div>
                     <div className="text-xs mt-1">直接显示原图</div>
@@ -649,12 +647,15 @@ function PhotoApp() {
                 >
                   返回
                 </button>
-                <button
-                  onClick={uploadPhoto}
-                  className="bg-[#FFC837] text-black py-4 px-4 border-4 border-black font-bold hover:bg-black hover:text-[#FFC837] transition-colors"
+                <a
+                  href="http://wonderland.mofa.ai:8081"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-[#FC6A59] text-black py-4 px-4 border-4 border-black font-bold hover:bg-black hover:text-[#FC6A59] transition-colors flex items-center justify-center space-x-2"
                 >
-                  {useAI ? "生成" : "上传展示"}
-                </button>
+                  <ExternalLink className="w-4 h-4" />
+                  <span>查看大屏</span>
+                </a>
               </div>
             </div>
           )}
