@@ -234,9 +234,7 @@ export default function DisplayApp() {
                   <h1 className="text-6xl font-bold text-black mb-4">
                     GOSIM Wonderland
                   </h1>
-                  <p className="text-3xl text-black font-bold mb-2">
-                    拍照生成专属个性化图片
-                  </p>
+                  <p className="text-3xl text-black font-bold mb-2"></p>
                   <p className="text-xl text-black font-bold opacity-90">
                     开发者大会专属AI体验
                   </p>

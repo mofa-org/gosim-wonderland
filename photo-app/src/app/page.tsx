@@ -8,7 +8,7 @@ import {
   Upload,
   CheckCircle,
   AlertCircle,
-  ImageIcon,
+  Film,
   Github,
   ExternalLink,
 } from "lucide-react";
@@ -49,8 +49,10 @@ function PhotoApp() {
   const startCamera = useCallback(async () => {
     try {
       // 检查域名，如果是wonderland.mofa.ai则重定向到HTTPS域名
-      if (location.hostname === 'wonderland.mofa.ai') {
-        console.log('检测到wonderland.mofa.ai域名，重定向到HTTPS域名以支持摄像头功能');
+      if (location.hostname === "wonderland.mofa.ai") {
+        console.log(
+          "检测到wonderland.mofa.ai域名，重定向到HTTPS域名以支持摄像头功能",
+        );
         window.location.href = `https://test.liyao.space${location.pathname}${location.search}`;
         return;
       }
@@ -262,11 +264,11 @@ function PhotoApp() {
           setStep("result");
         }
       } else {
-        setError(result.error || "上传失败");
+        setError(result.error || "请稍后重试，可能是服务器繁忙");
         setStep("error");
       }
     } catch (error) {
-      setError("网络错误，请重试");
+      setError("网络繁忙，请稍后重试");
       setStep("error");
     }
   }, [capturedImage, userSession, caption, useAI]);
@@ -284,18 +286,43 @@ function PhotoApp() {
             setUploadedPhoto(photo);
             setStep("result");
           } else if (photo.status === "failed" || photo.processing_error) {
-            setError(photo.processing_error || "AI处理失败");
+            // 友好化错误信息
+            let friendlyError =
+              "请重试一下，可能遇到了以下情况：\n• 服务器正在高峰期\n• 照片可能包含敏感内容\n• 网络连接不稳定";
+
+            if (photo.processing_error) {
+              const errorMsg = photo.processing_error.toLowerCase();
+              if (
+                errorMsg.includes("sensitive") ||
+                errorMsg.includes("违规") ||
+                errorMsg.includes("敏感")
+              ) {
+                friendlyError = "照片可能包含敏感内容，请尝试其他照片";
+              } else if (
+                errorMsg.includes("timeout") ||
+                errorMsg.includes("超时")
+              ) {
+                friendlyError = "服务器响应较慢，请稍后重试";
+              } else if (
+                errorMsg.includes("rate") ||
+                errorMsg.includes("限制")
+              ) {
+                friendlyError = "当前访问量较大，请稍等片刻再试";
+              }
+            }
+
+            setError(friendlyError);
             setStep("error");
           } else {
             // 继续等待
             setTimeout(checkStatus, 2000);
           }
         } else {
-          setError("检查状态失败");
+          setError("连接不稳定，请稍后重试");
           setStep("error");
         }
       } catch (error) {
-        setError("网络错误");
+        setError("网络连接不稳定，请检查网络后重试");
         setStep("error");
       }
     };
@@ -355,23 +382,24 @@ function PhotoApp() {
         {/* Header */}
         <div className="bg-[#6DCACE] p-6 text-center border-b-4 border-black">
           <h1 className="text-2xl font-bold text-black">GOSIM Wonderland</h1>
-          <p className="text-black mt-2">拍照生成专属个性化图片</p>
+          <p className="text-black mt-2"></p>
         </div>
 
         {/* Content */}
         <div className="p-6">
           {step === "welcome" && (
             <div className="text-center space-y-6">
-              <div className="w-24 h-24 mx-auto bg-[#FFC837] border-4 border-black flex items-center justify-center">
-                <ImageIcon className="w-12 h-12 text-black" />
+              <div
+                onClick={handleFileSelect}
+                className="w-24 h-24 mx-auto bg-[#FFC837] border-4 border-black flex items-center justify-center cursor-pointer hover:bg-black hover:text-[#FFC837] transition-colors duration-200 group"
+              >
+                <Film className="w-12 h-12 text-black group-hover:text-[#FFC837] transition-colors duration-200" />
               </div>
               <div>
                 <h2 className="text-xl font-bold text-black mb-2">
-                  选择图片方式
+                  点击上传图片
                 </h2>
-                <p className="text-black">
-                  拍照或上传图片，我们会为您生成定制图像！
-                </p>
+                <p className="text-black">为您生成专属个性图片</p>
               </div>
               <div className="space-y-4">
                 <button
@@ -381,9 +409,18 @@ function PhotoApp() {
                   <Camera className="w-5 h-5" />
                   <span>拍照</span>
                 </button>
+                <a
+                  href="http://wonderland.mofa.ai:8081"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full bg-[#FC6A59] text-black py-4 px-6 border-4 border-black font-bold hover:bg-black hover:text-[#FC6A59] transition-colors duration-200 flex items-center justify-center space-x-2"
+                >
+                  <ExternalLink className="w-5 h-5" />
+                  <span>查看大屏展示</span>
+                </a>
                 <button
                   onClick={handleFileSelect}
-                  className="w-full bg-[#6ECACD] text-black py-4 px-6 border-4 border-black font-bold hover:bg-black hover:text-[#6ECACD] transition-colors duration-200 flex items-center justify-center space-x-2"
+                  className="hidden w-full bg-[#6ECACD] text-black py-4 px-6 border-4 border-black font-bold hover:bg-black hover:text-[#6ECACD] transition-colors duration-200 flex items-center justify-center space-x-2"
                 >
                   <Upload className="w-5 h-5" />
                   <span>上传图片</span>
@@ -689,16 +726,18 @@ function PhotoApp() {
 
           {step === "error" && (
             <div className="text-center space-y-4">
-              <div className="bg-[#fd553f] p-4 border-4 border-black">
-                <AlertCircle className="w-12 h-12 text-black mx-auto mb-2" />
-                <h3 className="text-lg font-bold text-black">出错了</h3>
-                <p className="text-black font-bold">{error}</p>
+              <div className="bg-[#FFE4B5] p-4 border-4 border-black">
+                <AlertCircle className="w-12 h-12 text-[#D2691E] mx-auto mb-2" />
+                <h3 className="text-lg font-bold text-[#8B4513]">请稍等</h3>
+                <p className="text-[#8B4513] font-medium whitespace-pre-line">
+                  {error}
+                </p>
               </div>
               <button
                 onClick={resetApp}
-                className="w-full bg-[#FC6A59] text-black py-4 px-6 border-4 border-black font-bold hover:bg-black hover:text-[#FC6A59] transition-colors"
+                className="w-full bg-[#DEB887] text-[#8B4513] py-4 px-6 border-4 border-black font-bold hover:bg-[#8B4513] hover:text-[#DEB887] transition-colors"
               >
-                重新开始
+                重新尝试
               </button>
             </div>
           )}
@@ -710,17 +749,6 @@ function PhotoApp() {
         <div className="p-4 text-center">
           <div className="text-sm font-bold text-black mb-3">
             Powered by <span className="text-[#6DCACE]">mofa.ai</span>
-          </div>
-          <div className="flex justify-center space-x-2 mb-4">
-            <a
-              href="http://wonderland.mofa.ai:8081"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center space-x-1 bg-[#FC6A59] text-black px-4 py-2 border-2 border-black font-bold hover:bg-black hover:text-[#FC6A59] transition-colors text-sm"
-            >
-              <ExternalLink className="w-4 h-4" />
-              <span>查看大屏展示</span>
-            </a>
           </div>
           <div className="flex justify-center space-x-2">
             <a
