@@ -8,7 +8,6 @@ import {
   Upload,
   CheckCircle,
   AlertCircle,
-  Film,
   Github,
   ExternalLink,
 } from "lucide-react";
@@ -437,7 +436,7 @@ function PhotoApp() {
                 onClick={handleFileSelect}
                 className="w-24 h-24 mx-auto bg-[#FFC837] border-4 border-black flex items-center justify-center cursor-pointer hover:bg-black hover:text-[#FFC837] transition-colors duration-200 group"
               >
-                <Film className="w-12 h-12 text-black group-hover:text-[#FFC837] transition-colors duration-200" />
+                <Camera className="w-12 h-12 text-black group-hover:text-[#FFC837] transition-colors duration-200" />
               </div>
               <div>
                 <h2 className="text-xl font-bold text-black mb-2">
@@ -448,7 +447,7 @@ function PhotoApp() {
               <div className="space-y-4">
                 <button
                   onClick={startCamera}
-                  className="w-full bg-[#6DCACE] text-black py-4 px-6 border-4 border-black font-bold hover:bg-black hover:text-[#6DCACE] transition-colors duration-200 flex items-center justify-center space-x-2"
+                  className="hidden w-full bg-[#6DCACE] text-black py-4 px-6 border-4 border-black font-bold hover:bg-black hover:text-[#6DCACE] transition-colors duration-200 flex items-center justify-center space-x-2"
                 >
                   <Camera className="w-5 h-5" />
                   <span>拍照</span>
