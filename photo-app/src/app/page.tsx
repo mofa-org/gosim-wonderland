@@ -38,28 +38,31 @@ function PhotoApp() {
   useEffect(() => {
     // 在客户端生成sessionId，避免SSR不匹配
     setUserSession(generateSessionId());
-    
+
     // 检查是否在test.liyao.space域名，如果是则自动启动拍照
-    if (typeof window !== 'undefined' && window.location.hostname === 'test.liyao.space') {
-      console.log('检测到test.liyao.space域名，自动启动拍照功能');
+    if (
+      typeof window !== "undefined" &&
+      window.location.hostname === "test.liyao.space"
+    ) {
+      console.log("检测到test.liyao.space域名，自动启动拍照功能");
       // 稍微延迟以确保组件完全加载
       setTimeout(async () => {
         try {
           // 检查浏览器支持
           if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            console.log('浏览器不支持摄像头功能');
+            console.log("浏览器不支持摄像头功能");
             return;
           }
 
           // 检查是否为HTTPS
           if (window.location.protocol !== "https:") {
-            console.log('非HTTPS环境，无法启动摄像头');
+            console.log("非HTTPS环境，无法启动摄像头");
             return;
           }
 
           // 直接切换到camera状态启动摄像头
           setStep("camera");
-          
+
           const stream = await navigator.mediaDevices.getUserMedia({
             video: {
               facingMode: "user",
@@ -68,14 +71,14 @@ function PhotoApp() {
             },
             audio: false,
           });
-          
+
           // 设置视频流到video元素
           if (videoRef.current && stream) {
             videoRef.current.srcObject = stream;
             setIsVideoReady(true);
           }
         } catch (error) {
-          console.error('自动启动摄像头失败:', error);
+          console.error("自动启动摄像头失败:", error);
           // 失败后保持在welcome状态
           setStep("welcome");
         }
@@ -265,56 +268,63 @@ function PhotoApp() {
   }, [isVideoReady]);
 
   const retakePhoto = useCallback(() => {
-    setCapturedImage(null);
-    startCamera();
-  }, [startCamera]);
+    // 原来的逻辑：重新启动摄像头
+    // setCapturedImage(null);
+    // startCamera();
 
-  const uploadPhoto = useCallback(async (forceUseAI?: boolean) => {
-    if (!capturedImage || !userSession) return;
+    // 新逻辑：直接刷新页面回到首页
+    window.location.reload();
+  }, []);
 
-    const actualUseAI = forceUseAI !== undefined ? forceUseAI : useAI;
-    setStep("uploading");
+  const uploadPhoto = useCallback(
+    async (forceUseAI?: boolean) => {
+      if (!capturedImage || !userSession) return;
 
-    try {
-      // 将base64转换为Blob
-      const response = await fetch(capturedImage);
-      const blob = await response.blob();
+      const actualUseAI = forceUseAI !== undefined ? forceUseAI : useAI;
+      setStep("uploading");
 
-      const formData = new FormData();
-      formData.append("photo", blob, "photo.jpg");
-      formData.append("userSession", userSession);
-      if (caption.trim()) {
-        formData.append("caption", caption.trim());
-      }
-      formData.append("useAI", actualUseAI.toString());
+      try {
+        // 将base64转换为Blob
+        const response = await fetch(capturedImage);
+        const blob = await response.blob();
 
-      const uploadResponse = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      const result = await uploadResponse.json();
-
-      if (result.success) {
-        setUploadedPhoto(result.photo);
-
-        if (actualUseAI) {
-          setStep("processing");
-          // 轮询检查处理状态
-          checkProcessingStatus(result.photo.id);
-        } else {
-          // 用户选择保持原样，直接跳到结果页面
-          setStep("result");
+        const formData = new FormData();
+        formData.append("photo", blob, "photo.jpg");
+        formData.append("userSession", userSession);
+        if (caption.trim()) {
+          formData.append("caption", caption.trim());
         }
-      } else {
-        setError(result.error || "请稍后重试，可能是服务器繁忙");
+        formData.append("useAI", actualUseAI.toString());
+
+        const uploadResponse = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        const result = await uploadResponse.json();
+
+        if (result.success) {
+          setUploadedPhoto(result.photo);
+
+          if (actualUseAI) {
+            setStep("processing");
+            // 轮询检查处理状态
+            checkProcessingStatus(result.photo.id);
+          } else {
+            // 用户选择保持原样，直接跳到结果页面
+            setStep("result");
+          }
+        } else {
+          setError(result.error || "请稍后重试，可能是服务器繁忙");
+          setStep("error");
+        }
+      } catch (error) {
+        setError("网络繁忙，请稍后重试");
         setStep("error");
       }
-    } catch (error) {
-      setError("网络繁忙，请稍后重试");
-      setStep("error");
-    }
-  }, [capturedImage, userSession, caption, useAI]);
+    },
+    [capturedImage, userSession, caption, useAI],
+  );
 
   const checkProcessingStatus = useCallback(async (photoId: string) => {
     const checkStatus = async () => {
@@ -565,6 +575,43 @@ function PhotoApp() {
                 </div>
               )}
 
+              {/* AI处理选择 - 移到最上面 */}
+              <div className="text-center space-y-4">
+                <div className="hidden bg-[#FFC837] p-4 border-4 border-black">
+                  <h3 className="text-xl font-bold text-black mb-2">
+                    选择处理方式
+                  </h3>
+                  <p className="text-black text-sm font-bold">
+                    您希望如何处理您的照片？
+                  </p>
+                </div>
+
+                {/* AI卡通化和保持原样按钮，宽度比例3:1 */}
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => {
+                      setUseAI(true);
+                      uploadPhoto(true);
+                    }}
+                    className="flex-[3] p-4 border-4 border-black font-bold transition-colors bg-[#FC6A59] text-black hover:bg-black hover:text-[#FC6A59]"
+                  >
+                    <div className="text-sm font-bold">生成！</div>
+                    <div className="text-xs mt-1">自定义特色风格的图像</div>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setUseAI(false);
+                      uploadPhoto(false);
+                    }}
+                    className="flex-[1] p-4 border-4 border-black font-bold transition-colors bg-[#6DCACE] text-black hover:bg-black hover:text-[#6DCACE]"
+                  >
+                    <div className="text-sm font-bold">上传原图</div>
+                    <div className="text-xs mt-1">直接显示原图</div>
+                  </button>
+                </div>
+              </div>
+
               {/* 预设风格选项 - 只在选择AI处理时显示 */}
               {useAI && (
                 <div>
@@ -646,42 +693,6 @@ function PhotoApp() {
                   )}
                 </div>
               )}
-
-              {/* AI处理选择 */}
-              <div className="text-center space-y-4">
-                <div className="hidden bg-[#FFC837] p-4 border-4 border-black">
-                  <h3 className="text-xl font-bold text-black mb-2">
-                    选择处理方式
-                  </h3>
-                  <p className="text-black text-sm font-bold">
-                    您希望如何处理您的照片？
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <button
-                    onClick={() => {
-                      setUseAI(true);
-                      uploadPhoto(true);
-                    }}
-                    className="p-4 border-4 border-black font-bold transition-colors bg-[#6DCACE] text-black hover:bg-black hover:text-[#6DCACE]"
-                  >
-                    <div className="text-sm font-bold">AI卡通化</div>
-                    <div className="text-xs mt-1">生成卡通风格</div>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      setUseAI(false);
-                      uploadPhoto(false);
-                    }}
-                    className="p-4 border-4 border-black font-bold transition-colors bg-[#FC6A59] text-black hover:bg-black hover:text-[#FC6A59]"
-                  >
-                    <div className="text-sm font-bold">保持原样</div>
-                    <div className="text-xs mt-1">直接显示原图</div>
-                  </button>
-                </div>
-              </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <button
