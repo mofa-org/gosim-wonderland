@@ -2,8 +2,59 @@ import { NextRequest, NextResponse } from 'next/server'
 import { writeFile, mkdir } from 'fs/promises'
 import path from 'path'
 import { PhotoService } from '@/lib/db-operations'
+import sharp from 'sharp'
 
 const photoService = new PhotoService()
+
+// 图片压缩到480p配置
+const MAX_WIDTH = 640
+const MAX_HEIGHT = 480
+const JPEG_QUALITY = 85
+
+// 压缩图片到480p
+async function compressImageTo480p(buffer: Buffer): Promise<Buffer> {
+  try {
+    const image = sharp(buffer)
+    const metadata = await image.metadata()
+    
+    console.log(`📏 原图尺寸: ${metadata.width}x${metadata.height}`)
+    
+    // 计算压缩后的尺寸（保持宽高比）
+    let newWidth = metadata.width!
+    let newHeight = metadata.height!
+    
+    if (newWidth > MAX_WIDTH || newHeight > MAX_HEIGHT) {
+      const widthRatio = MAX_WIDTH / newWidth
+      const heightRatio = MAX_HEIGHT / newHeight
+      const ratio = Math.min(widthRatio, heightRatio)
+      
+      newWidth = Math.round(newWidth * ratio)
+      newHeight = Math.round(newHeight * ratio)
+    }
+    
+    console.log(`📐 压缩后尺寸: ${newWidth}x${newHeight}`)
+    
+    // 压缩图片
+    const compressedBuffer = await image
+      .resize(newWidth, newHeight, {
+        fit: 'inside',
+        withoutEnlargement: true
+      })
+      .jpeg({ quality: JPEG_QUALITY })
+      .toBuffer()
+    
+    const originalSize = buffer.length
+    const compressedSize = compressedBuffer.length
+    const compressionRatio = ((originalSize - compressedSize) / originalSize * 100).toFixed(1)
+    
+    console.log(`🗜️ 文件大小: ${(originalSize/1024/1024).toFixed(2)}MB → ${(compressedSize/1024/1024).toFixed(2)}MB (压缩${compressionRatio}%)`)
+    
+    return compressedBuffer
+  } catch (error) {
+    console.error('图片压缩失败:', error)
+    return buffer // 压缩失败时返回原图
+  }
+}
 
 // 构建优化的AI prompt
 function buildOptimizedPrompt(userCaption: string): string {
@@ -50,16 +101,23 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 保存原图
+    // 处理图片：压缩到480p以提高AI处理速度
     const bytes = await file.arrayBuffer()
-    const buffer = Buffer.from(bytes)
+    const originalBuffer = Buffer.from(bytes)
+    
+    console.log(`📤 开始处理上传的图片: ${file.name}`)
+    
+    // 压缩图片到480p
+    const compressedBuffer = await compressImageTo480p(originalBuffer)
     
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.jpg`
     const uploadDir = path.join(process.cwd(), '..', 'original-photos')
     
     await mkdir(uploadDir, { recursive: true })
     const filePath = path.join(uploadDir, fileName)
-    await writeFile(filePath, buffer)
+    await writeFile(filePath, compressedBuffer)
+    
+    console.log(`✅ 图片已保存: ${fileName}`)
     
     const originalUrl = `/original-photos/${fileName}`
     

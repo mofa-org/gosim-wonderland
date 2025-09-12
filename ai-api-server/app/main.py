@@ -9,6 +9,8 @@ import time
 import random
 from PIL import Image
 from io import BytesIO
+import threading
+import signal
 
 try:
     from google import genai
@@ -29,6 +31,10 @@ ORIGINAL_PHOTOS_DIR = "../original-photos-cache"
 # 创建目录
 os.makedirs(AI_PHOTOS_DIR, exist_ok=True)  
 os.makedirs(ORIGINAL_PHOTOS_DIR, exist_ok=True)
+
+# 全局任务管理
+running_tasks = {}  # 存储正在运行的任务
+task_lock = threading.Lock()
 
 
 def download_and_cache_original_image(url: str) -> str:
@@ -322,6 +328,33 @@ def attempt_ai_generation(api_key: str, base_image_url: str, prompt_instruction:
 def read_root():
     return {"message": "GOSIM Wonderland AI Service", "status": "running"}
 
+@app.get("/running-tasks")
+def get_running_tasks():
+    """获取所有正在运行的任务"""
+    with task_lock:
+        return {
+            "running_tasks": list(running_tasks.keys()),
+            "count": len(running_tasks)
+        }
+
+@app.post("/cancel-task/{task_id}")
+def cancel_task(task_id: str):
+    """取消指定的任务"""
+    with task_lock:
+        if task_id not in running_tasks:
+            raise HTTPException(status_code=404, detail=f"任务 {task_id} 不存在或已完成")
+        
+        task_info = running_tasks[task_id]
+        task_info["cancelled"] = True
+        
+        print(f"🚫 任务 {task_id} 被标记为取消")
+        
+        return {
+            "status": "success", 
+            "message": f"任务 {task_id} 已标记为取消",
+            "task_id": task_id
+        }
+
 @app.get("/vidu-task/{task_id}")
 def get_vidu_task_status(task_id: str):
     """查询Vidu任务状态（实验性接口）"""
@@ -375,10 +408,29 @@ def health_check():
         "fallback_strategy": "通义5次 → Gemini1次 → Vidu1次 (共7次重试)"
     }
 
+def is_task_cancelled(task_id: str) -> bool:
+    """检查任务是否被取消"""
+    with task_lock:
+        task_info = running_tasks.get(task_id)
+        return task_info and task_info.get("cancelled", False)
+
 @app.post("/generate-image/")
 def generate_image(request: dict):
     """带自动重试机制的卡通图片生成"""
+    # 生成任务ID
+    task_id = str(uuid.uuid4())
+    
+    # 注册任务
+    with task_lock:
+        running_tasks[task_id] = {
+            "created_at": time.time(),
+            "cancelled": False,
+            "request": request
+        }
+    
     try:
+        print(f"🚀 开始任务 {task_id}")
+        
         model_name = request.get("model_name", "qwen-image-edit")
         prompt = request.get("prompt", "生成可爱的卡通形象")
         base_image_url = request.get("base_image_url")
@@ -449,6 +501,13 @@ def generate_image(request: dict):
         max_attempts = 7  # 5次通义 + 1次Gemini + 1次Vidu
         
         for attempt in range(max_attempts):
+            # 检查任务是否被取消
+            if is_task_cancelled(task_id):
+                print(f"🚫 任务 {task_id} 已被取消，停止处理")
+                with task_lock:
+                    running_tasks.pop(task_id, None)
+                raise HTTPException(status_code=499, detail="任务已被取消")
+            
             current_prompt = prompt_variants[attempt % len(prompt_variants)]
             base_instruction = build_instruction(current_prompt)
             
@@ -477,7 +536,11 @@ def generate_image(request: dict):
             
             if result["success"]:
                 print(f"\n✅ {service_name}第{attempt + 1}次尝试成功！")
-                return {"status": "success", "image_paths": result["image_paths"]}
+                # 清理任务记录
+                with task_lock:
+                    running_tasks.pop(task_id, None)
+                print(f"🏁 任务 {task_id} 完成")
+                return {"status": "success", "image_paths": result["image_paths"], "task_id": task_id}
             else:
                 error_msg = result["error"]
                 all_errors.append(f"{service_name}第{attempt + 1}次: {error_msg}")
@@ -492,6 +555,12 @@ def generate_image(request: dict):
         # 所有尝试都失败了
         print(f"\n❌ 所有 {max_attempts} 次尝试都失败了（通义5次 + Gemini1次 + Vidu1次）")
         error_summary = "; ".join(all_errors)
+        
+        # 清理任务记录
+        with task_lock:
+            running_tasks.pop(task_id, None)
+        print(f"💀 任务 {task_id} 失败")
+        
         raise HTTPException(
             status_code=500,
             detail=f"AI生成失败，已重试{max_attempts}次: {error_summary}"
@@ -501,4 +570,8 @@ def generate_image(request: dict):
         raise  # 重新抛出HTTP异常
     except Exception as e:
         print(f"生成图片错误: {e}")
+        # 清理任务记录
+        with task_lock:
+            running_tasks.pop(task_id, None)
+        print(f"💀 任务 {task_id} 异常失败")
         raise HTTPException(status_code=500, detail=f"生成失败: {str(e)}")
