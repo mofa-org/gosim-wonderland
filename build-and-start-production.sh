@@ -66,6 +66,14 @@ echo "📥 克隆最新代码..."
 git clone git@github.com:mofa-org/gosim-wonderland.git
 cd gosim-wonderland
 
+echo "⚙️ 配置环境变量..."
+mkdir -p ai-api-server
+cat > ai-api-server/.env << EOF
+DASHSCOPE_API_KEY=$DASHSCOPE_API_KEY
+EOF
+echo "✅ API Key已保存到 ai-api-server/.env"
+echo ""
+
 echo "🔄 恢复备份数据..."
 # 恢复数据库
 if [ -f "$BACKUP_PATH/data/wonderland.db" ]; then
@@ -89,14 +97,6 @@ if [ -d "$BACKUP_PATH/original-photos-cache" ]; then
     cp -r "$BACKUP_PATH/original-photos-cache" .
     echo "✅ 照片缓存已恢复"
 fi
-
-echo "⚙️ 配置环境变量..."
-mkdir -p ai-api-server
-cat > ai-api-server/.env << EOF
-DASHSCOPE_API_KEY=$DASHSCOPE_API_KEY
-EOF
-echo "✅ API Key已保存到 ai-api-server/.env"
-echo ""
 
 # 询问用户选择
 echo "请选择操作："
