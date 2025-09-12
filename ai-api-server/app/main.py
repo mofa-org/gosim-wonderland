@@ -7,6 +7,15 @@ from dotenv import load_dotenv
 from urllib.parse import urlparse
 import time
 import random
+from PIL import Image
+from io import BytesIO
+
+try:
+    from google import genai
+    GEMINI_AVAILABLE = True
+except ImportError:
+    GEMINI_AVAILABLE = False
+    print("⚠️ Gemini不可用，请运行: pip install google-genai")
 
 load_dotenv()
 
@@ -101,6 +110,47 @@ def generate_prompt_variants(original_prompt: str) -> list[str]:
     
     return variants
 
+def attempt_gemini_generation(api_key: str, base_image_url: str, prompt_instruction: str, attempt_num: int) -> dict:
+    """Gemini AI生成尝试"""
+    if not GEMINI_AVAILABLE:
+        return {"success": False, "error": "Gemini包未安装"}
+    
+    try:
+        print(f"第{attempt_num}次尝试 - 使用Gemini，prompt: {prompt_instruction[:100]}...")
+        
+        # 初始化Gemini客户端
+        client = genai.Client(api_key=api_key)
+        
+        # 下载图片
+        response = requests.get(base_image_url, timeout=30)
+        response.raise_for_status()
+        image = Image.open(BytesIO(response.content))
+        
+        # 调用Gemini API
+        response = client.models.generate_content(
+            model="gemini-2.5-flash-image-preview",
+            contents=[prompt_instruction, image],
+        )
+        
+        # 处理响应
+        for part in response.candidates[0].content.parts:
+            if part.inline_data is not None:
+                # 保存生成的图片
+                generated_image = Image.open(BytesIO(part.inline_data.data))
+                unique_id = uuid.uuid4()
+                file_name = f"gemini_{unique_id}.png"
+                file_path = os.path.join(AI_PHOTOS_DIR, file_name)
+                generated_image.save(file_path)
+                
+                image_path = f"/ai-photos/{file_name}"
+                print(f"Gemini第{attempt_num}次尝试成功 - 保存图片: {image_path}")
+                return {"success": True, "image_paths": [image_path]}
+        
+        return {"success": False, "error": "Gemini未生成图片"}
+        
+    except Exception as e:
+        return {"success": False, "error": f"Gemini第{attempt_num}次尝试异常: {str(e)}"}
+
 def attempt_ai_generation(api_key: str, base_image_url: str, prompt_instruction: str, attempt_num: int) -> dict:
     """单次AI生成尝试"""
     try:
@@ -158,7 +208,9 @@ def health_check():
         "status": "healthy",
         "ai_photos_dir": AI_PHOTOS_DIR,
         "original_photos_dir": ORIGINAL_PHOTOS_DIR,
-        "api_key_configured": bool(os.getenv("DASHSCOPE_API_KEY") and os.getenv("DASHSCOPE_API_KEY") != "your_dashscope_api_key_here")
+        "dashscope_api_key_configured": bool(os.getenv("DASHSCOPE_API_KEY") and os.getenv("DASHSCOPE_API_KEY") != "your_dashscope_api_key_here"),
+        "gemini_api_key_configured": bool(os.getenv("GEMINI_API_KEY")),
+        "gemini_available": GEMINI_AVAILABLE
     }
 
 @app.post("/generate-image/")
@@ -172,9 +224,11 @@ def generate_image(request: dict):
         if not base_image_url:
             raise HTTPException(status_code=400, detail="缺少base_image_url参数")
 
-        # 获取API key
-        api_key = os.getenv("DASHSCOPE_API_KEY")
-        if not api_key or api_key == "your_dashscope_api_key_here":
+        # 获取API keys
+        dashscope_api_key = os.getenv("DASHSCOPE_API_KEY")
+        gemini_api_key = os.getenv("GEMINI_API_KEY")
+        
+        if not dashscope_api_key or dashscope_api_key == "your_dashscope_api_key_here":
             # Mock模式：生成随机彩色图片
             import random
             from PIL import Image
@@ -205,12 +259,9 @@ def generate_image(request: dict):
         # 记录所有尝试的错误
         all_errors = []
         
-        # 重试最多5次，使用不同的prompt变体
-        for attempt in range(5):
-            current_prompt = prompt_variants[attempt % len(prompt_variants)]
-            
-            # 构建完整的指令
-            base_instruction = f"""用户需求：{current_prompt}
+        # 构建完整的指令模板
+        def build_instruction(prompt_text):
+            return f"""用户需求：{prompt_text}
 
 请将参考图中的内容按照用户需求重新绘制为卡通风格，适用于开发者会议场景：
 1. 如果是人物：保持面部特征、发型、服装等个人识别要素，突出开发者/参会者的专业形象
@@ -222,17 +273,33 @@ def generate_image(request: dict):
 7. 避免添加文字、水印、多余装饰，保持专业简洁
 
 最终效果要求：既有卡通趣味性又保持技术会议的专业感，色彩和谐，构图完整。"""
+        
+        # 先用通义尝试3次，然后用Gemini尝试2次
+        for attempt in range(5):
+            current_prompt = prompt_variants[attempt % len(prompt_variants)]
+            base_instruction = build_instruction(current_prompt)
             
-            # 尝试AI生成
-            result = attempt_ai_generation(api_key, base_image_url, base_instruction, attempt + 1)
+            if attempt < 3:
+                # 前3次尝试用通义
+                result = attempt_ai_generation(dashscope_api_key, base_image_url, base_instruction, attempt + 1)
+                service_name = "通义"
+            else:
+                # 后2次尝试用Gemini作为fallback
+                if gemini_api_key and GEMINI_AVAILABLE:
+                    result = attempt_gemini_generation(gemini_api_key, base_image_url, current_prompt, attempt + 1)
+                    service_name = "Gemini"
+                else:
+                    # 如果Gemini不可用，继续用通义
+                    result = attempt_ai_generation(dashscope_api_key, base_image_url, base_instruction, attempt + 1)
+                    service_name = "通义"
             
             if result["success"]:
-                print(f"\n✅ 第{attempt + 1}次尝试成功！")
+                print(f"\n✅ {service_name}第{attempt + 1}次尝试成功！")
                 return {"status": "success", "image_paths": result["image_paths"]}
             else:
                 error_msg = result["error"]
-                all_errors.append(f"第{attempt + 1}次: {error_msg}")
-                print(f"\n⚠️ 第{attempt + 1}次尝试失败: {error_msg}")
+                all_errors.append(f"{service_name}第{attempt + 1}次: {error_msg}")
+                print(f"\n⚠️ {service_name}第{attempt + 1}次尝试失败: {error_msg}")
                 
                 # 在重试之间稍微等待，避免频繁请求
                 if attempt < 4:  # 最后一次不等待
@@ -241,7 +308,7 @@ def generate_image(request: dict):
                     time.sleep(wait_time)
         
         # 所有尝试都失败了
-        print(f"\n❌ 所有 5 次尝试都失败了")
+        print(f"\n❌ 所有 5 次尝试都失败了（通义3次 + Gemini2次）")
         error_summary = "; ".join(all_errors)
         raise HTTPException(
             status_code=500,
