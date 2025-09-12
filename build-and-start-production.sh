@@ -59,8 +59,57 @@ echo "🗑️ 清理旧项目..."
 cd ..
 rm -rf gosim-wonderland
 
-echo "🔑 配置阿里云API密钥..."
-read -p "请输入你的阿里云DashScope API Key: " DASHSCOPE_API_KEY
+echo "🔑 配置AI服务API密钥..."
+echo ""
+echo "🔒 安全提示: 
+  - API密钥将只保存在本地.env文件中
+  - 不会上传到任何远程服务器
+  - 建议复制粘贴密钥以避免输入错误"
+echo ""
+
+# 通义千问 API Key (必需)
+while true; do
+    read -p "1️⃣  阿里云DashScope API Key (必需): " DASHSCOPE_API_KEY
+    if [ -n "$DASHSCOPE_API_KEY" ]; then
+        if [[ "$DASHSCOPE_API_KEY" =~ ^sk-[a-zA-Z0-9]{32}$ ]]; then
+            echo "✅ 通义千问API Key格式验证通过"
+            break
+        else
+            echo "⚠️ API Key格式可能不正确，但继续使用"
+            break
+        fi
+    else
+        echo "❌ DashScope API Key是必需的，请重新输入"
+    fi
+done
+
+# Gemini API Key (可选)
+echo ""
+read -p "2️⃣  Google Gemini API Key (可选，用于prompt优化): " GEMINI_API_KEY
+if [ -n "$GEMINI_API_KEY" ]; then
+    if [[ "$GEMINI_API_KEY" =~ ^AIza[a-zA-Z0-9_-]{35}$ ]]; then
+        echo "✅ Gemini API Key格式验证通过 - 支持智能prompt优化"
+    else
+        echo "⚠️ Gemini API Key格式可能不正确，但继续使用"
+    fi
+else
+    echo "⚠️ 未配置Gemini - 将跳过prompt优化功能"
+fi
+
+# Vidu API Key (可选)  
+echo ""
+read -p "3️⃣  Vidu API Key (可选，用作终极fallback): " VIDU_API_KEY
+if [ -n "$VIDU_API_KEY" ]; then
+    if [[ "$VIDU_API_KEY" =~ ^vda_[0-9]{18}_[a-zA-Z0-9]{32}$ ]]; then
+        echo "✅ Vidu API Key格式验证通过 - 支持多重fallback"
+    else
+        echo "⚠️ Vidu API Key格式可能不正确，但继续使用"
+    fi
+else
+    echo "⚠️ 未配置Vidu - 将使用通义+Gemini双重fallback"
+fi
+
+echo ""
 
 echo "📥 克隆最新代码..."
 git clone git@github.com:mofa-org/gosim-wonderland.git
@@ -68,10 +117,42 @@ cd gosim-wonderland
 
 echo "⚙️ 配置环境变量..."
 mkdir -p ai-api-server
-cat > ai-api-server/.env << EOF
-DASHSCOPE_API_KEY=$DASHSCOPE_API_KEY
-EOF
-echo "✅ API Key已保存到 ai-api-server/.env"
+
+# 生成.env文件
+echo "# GOSIM Wonderland AI服务配置" > ai-api-server/.env
+echo "DASHSCOPE_API_KEY=$DASHSCOPE_API_KEY" >> ai-api-server/.env
+
+if [ -n "$GEMINI_API_KEY" ]; then
+    echo "GEMINI_API_KEY=$GEMINI_API_KEY" >> ai-api-server/.env
+fi
+
+if [ -n "$VIDU_API_KEY" ]; then
+    echo "VIDU_API_KEY=$VIDU_API_KEY" >> ai-api-server/.env
+fi
+
+# 添加其他环境变量 (如果需要)
+echo ""
+read -p "4️⃣  PicGo API Key (可选，用于图床服务): " PICGO_API_KEY
+if [ -n "$PICGO_API_KEY" ]; then
+    echo "PICGO_API_KEY=$PICGO_API_KEY" >> ai-api-server/.env
+    echo "✅ PicGo API Key已配置"
+else
+    echo "⚠️ 未配置PicGo - 图床功能将不可用"
+fi
+
+echo "✅ 环境配置已保存到 ai-api-server/.env"
+echo "📊 配置的服务:"
+echo "  - 通义千问: ✅ 已配置"
+if [ -n "$GEMINI_API_KEY" ]; then
+    echo "  - Gemini: ✅ 已配置 (prompt优化 + fallback)"
+else
+    echo "  - Gemini: ⚠️ 未配置"
+fi
+if [ -n "$VIDU_API_KEY" ]; then
+    echo "  - Vidu: ✅ 已配置 (终极fallback)"
+else
+    echo "  - Vidu: ⚠️ 未配置"
+fi
 echo ""
 
 # 检查是否有备份数据
@@ -214,12 +295,28 @@ cd ..
 # (已经在前面创建了)
 
 echo ""
-echo "🎉 所有服务已启动!"
+echo "🎉 GOSIM Wonderland 全栈AI服务已启动!"
+echo ""
+echo "🌐 服务端点:"
 echo "🤖 AI主服务: http://localhost:8000 (业务接口)"
 echo "🗂️ AI静态服务: http://localhost:8080 (供阿里云访问)"
 echo "📱 用户端: http://localhost:80 (Photo App)"
 echo "📺 展示端: http://localhost:8081 (Display App)"
 echo "⚙️ 管理端: http://localhost:8082 (Admin Panel)"
+echo ""
+echo "🎯 AI服务能力:"
+echo "🔥 通义千问: 5次重试 (主力服务)"
+if [ -n "$GEMINI_API_KEY" ]; then
+    echo "🧠 Gemini: 智能prompt优化 + 图像fallback"
+else
+    echo "⚠️ Gemini: 未配置"
+fi
+if [ -n "$VIDU_API_KEY" ]; then
+    echo "🎨 Vidu: 专业图像生成 (终极fallback)"
+else
+    echo "⚠️ Vidu: 未配置"
+fi
+echo "💪 总计: 最多7次重试，三重AI保障!"
 echo ""
 echo "📋 日志文件:"
 echo "- AI主服务器: logs/ai-server.log"
