@@ -74,28 +74,56 @@ EOF
 echo "✅ API Key已保存到 ai-api-server/.env"
 echo ""
 
-echo "🔄 恢复备份数据..."
-# 恢复数据库
-if [ -f "$BACKUP_PATH/data/wonderland.db" ]; then
-    mkdir -p photo-app/data
-    cp "$BACKUP_PATH/data/wonderland.db" photo-app/data/
-    echo "✅ 数据库已恢复"
+# 检查是否有备份数据
+RESTORE_FROM_BACKUP=""
+if [ -d "$BACKUP_PATH" ]; then
+    echo "📦 检测到当前备份：$BACKUP_PATH"
+    RESTORE_FROM_BACKUP="$BACKUP_PATH"
+elif [ -d "$BACKUP_DIR" ] && [ "$(ls -A $BACKUP_DIR 2>/dev/null)" ]; then
+    # 寻找最近的备份
+    LATEST_BACKUP=$(ls -t "$BACKUP_DIR"/gosim_backup_* 2>/dev/null | head -n 1)
+    if [ -n "$LATEST_BACKUP" ]; then
+        echo "📦 检测到最近的备份：$(basename $LATEST_BACKUP)"
+        RESTORE_FROM_BACKUP="$LATEST_BACKUP"
+    fi
 fi
 
-# 恢复照片目录
-if [ -d "$BACKUP_PATH/original-photos" ]; then
-    cp -r "$BACKUP_PATH/original-photos" .
-    echo "✅ 原始照片已恢复"
-fi
+# 询问用户是否恢复备份
+if [ -n "$RESTORE_FROM_BACKUP" ]; then
+    echo "请选择数据恢复方式："
+    echo "1) 使用备份数据 (推荐)"
+    echo "2) 全新开始 (清空所有数据)"
+    read -p "请输入选择 (1 或 2): " RESTORE_CHOICE
+    
+    if [ "$RESTORE_CHOICE" = "1" ]; then
+        echo "🔄 恢复备份数据..."
+        # 恢复数据库
+        if [ -f "$RESTORE_FROM_BACKUP/data/wonderland.db" ]; then
+            mkdir -p photo-app/data
+            cp "$RESTORE_FROM_BACKUP/data/wonderland.db" photo-app/data/
+            echo "✅ 数据库已恢复"
+        fi
 
-if [ -d "$BACKUP_PATH/ai-photos" ]; then
-    cp -r "$BACKUP_PATH/ai-photos" .
-    echo "✅ AI照片已恢复"
-fi
+        # 恢复照片目录
+        if [ -d "$RESTORE_FROM_BACKUP/original-photos" ]; then
+            cp -r "$RESTORE_FROM_BACKUP/original-photos" .
+            echo "✅ 原始照片已恢复"
+        fi
 
-if [ -d "$BACKUP_PATH/original-photos-cache" ]; then
-    cp -r "$BACKUP_PATH/original-photos-cache" .
-    echo "✅ 照片缓存已恢复"
+        if [ -d "$RESTORE_FROM_BACKUP/ai-photos" ]; then
+            cp -r "$RESTORE_FROM_BACKUP/ai-photos" .
+            echo "✅ AI照片已恢复"
+        fi
+
+        if [ -d "$RESTORE_FROM_BACKUP/original-photos-cache" ]; then
+            cp -r "$RESTORE_FROM_BACKUP/original-photos-cache" .
+            echo "✅ 照片缓存已恢复"
+        fi
+    else
+        echo "🆕 选择全新开始，不恢复备份数据"
+    fi
+else
+    echo "ℹ️ 未找到备份数据，将全新开始"
 fi
 
 # 询问用户选择
