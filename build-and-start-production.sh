@@ -20,6 +20,41 @@ if ! command -v git >/dev/null 2>&1; then
     exit 1
 fi
 
+echo "💾 备份现有数据..."
+BACKUP_DIR="$HOME/gosim-backups"
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+BACKUP_PATH="$BACKUP_DIR/gosim_backup_$TIMESTAMP"
+
+# 创建备份目录
+mkdir -p "$BACKUP_PATH"
+
+# 备份数据库文件
+if [ -f "photo-app/data/wonderland.db" ]; then
+    mkdir -p "$BACKUP_PATH/data"
+    cp photo-app/data/wonderland.db "$BACKUP_PATH/data/"
+    echo "✅ 数据库已备份到 $BACKUP_PATH/data/"
+fi
+
+# 备份照片目录
+if [ -d "original-photos" ] && [ "$(ls -A original-photos 2>/dev/null)" ]; then
+    cp -r original-photos "$BACKUP_PATH/"
+    echo "✅ 原始照片已备份到 $BACKUP_PATH/original-photos/"
+fi
+
+if [ -d "ai-photos" ] && [ "$(ls -A ai-photos 2>/dev/null)" ]; then
+    cp -r ai-photos "$BACKUP_PATH/"
+    echo "✅ AI照片已备份到 $BACKUP_PATH/ai-photos/"
+fi
+
+# 备份缓存目录
+if [ -d "original-photos-cache" ] && [ "$(ls -A original-photos-cache 2>/dev/null)" ]; then
+    cp -r original-photos-cache "$BACKUP_PATH/"
+    echo "✅ 照片缓存已备份到 $BACKUP_PATH/original-photos-cache/"
+fi
+
+echo "📝 备份完成！位置: $BACKUP_PATH"
+echo ""
+
 echo "🗑️ 清理旧项目..."
 cd ..
 rm -rf gosim-wonderland
@@ -79,6 +114,30 @@ echo "🔨 构建生产版本..."
 cd photo-app && npm run build && cd ..
 cd display-app && npm run build && cd ..
 cd admin-panel && npm run build && cd ..
+
+echo "🔄 恢复备份数据..."
+# 恢复数据库
+if [ -f "$BACKUP_PATH/data/wonderland.db" ]; then
+    mkdir -p photo-app/data
+    cp "$BACKUP_PATH/data/wonderland.db" photo-app/data/
+    echo "✅ 数据库已恢复"
+fi
+
+# 恢复照片目录
+if [ -d "$BACKUP_PATH/original-photos" ]; then
+    cp -r "$BACKUP_PATH/original-photos" .
+    echo "✅ 原始照片已恢复"
+fi
+
+if [ -d "$BACKUP_PATH/ai-photos" ]; then
+    cp -r "$BACKUP_PATH/ai-photos" .
+    echo "✅ AI照片已恢复"
+fi
+
+if [ -d "$BACKUP_PATH/original-photos-cache" ]; then
+    cp -r "$BACKUP_PATH/original-photos-cache" .
+    echo "✅ 照片缓存已恢复"
+fi
 
 echo "🚀 启动所有服务..."
 
