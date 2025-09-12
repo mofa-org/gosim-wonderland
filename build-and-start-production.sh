@@ -66,6 +66,30 @@ echo "📥 克隆最新代码..."
 git clone git@github.com:mofa-org/gosim-wonderland.git
 cd gosim-wonderland
 
+echo "🔄 恢复备份数据..."
+# 恢复数据库
+if [ -f "$BACKUP_PATH/data/wonderland.db" ]; then
+    mkdir -p photo-app/data
+    cp "$BACKUP_PATH/data/wonderland.db" photo-app/data/
+    echo "✅ 数据库已恢复"
+fi
+
+# 恢复照片目录
+if [ -d "$BACKUP_PATH/original-photos" ]; then
+    cp -r "$BACKUP_PATH/original-photos" .
+    echo "✅ 原始照片已恢复"
+fi
+
+if [ -d "$BACKUP_PATH/ai-photos" ]; then
+    cp -r "$BACKUP_PATH/ai-photos" .
+    echo "✅ AI照片已恢复"
+fi
+
+if [ -d "$BACKUP_PATH/original-photos-cache" ]; then
+    cp -r "$BACKUP_PATH/original-photos-cache" .
+    echo "✅ 照片缓存已恢复"
+fi
+
 echo "⚙️ 配置环境变量..."
 mkdir -p ai-api-server
 cat > ai-api-server/.env << EOF
@@ -114,30 +138,6 @@ echo "🔨 构建生产版本..."
 cd photo-app && npm run build && cd ..
 cd display-app && npm run build && cd ..
 cd admin-panel && npm run build && cd ..
-
-echo "🔄 恢复备份数据..."
-# 恢复数据库
-if [ -f "$BACKUP_PATH/data/wonderland.db" ]; then
-    mkdir -p photo-app/data
-    cp "$BACKUP_PATH/data/wonderland.db" photo-app/data/
-    echo "✅ 数据库已恢复"
-fi
-
-# 恢复照片目录
-if [ -d "$BACKUP_PATH/original-photos" ]; then
-    cp -r "$BACKUP_PATH/original-photos" .
-    echo "✅ 原始照片已恢复"
-fi
-
-if [ -d "$BACKUP_PATH/ai-photos" ]; then
-    cp -r "$BACKUP_PATH/ai-photos" .
-    echo "✅ AI照片已恢复"
-fi
-
-if [ -d "$BACKUP_PATH/original-photos-cache" ]; then
-    cp -r "$BACKUP_PATH/original-photos-cache" .
-    echo "✅ 照片缓存已恢复"
-fi
 
 echo "🚀 启动所有服务..."
 
