@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { Check, X, RefreshCw, Clock, CheckCircle, XCircle } from "lucide-react";
+import { Check, X, RefreshCw, Clock, CheckCircle, XCircle, StopCircle } from "lucide-react";
 import { Photo, PhotoStatus } from "@/lib/types";
 
 interface Stats {
@@ -25,6 +25,8 @@ export default function AdminPanel() {
   const [currentTab, setCurrentTab] = useState<PhotoStatus>("completed");
   const [loading, setLoading] = useState(false);
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
+  const [runningTasks, setRunningTasks] = useState<string[]>([]);
+  const [cancellingTasks, setCancellingTasks] = useState<Set<string>>(new Set());
 
   // 登录状态管理
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -63,8 +65,12 @@ export default function AdminPanel() {
   useEffect(() => {
     if (isAuthenticated) {
       loadPhotos();
+      loadRunningTasks();
       // 定期刷新
-      const interval = setInterval(loadPhotos, 5000);
+      const interval = setInterval(() => {
+        loadPhotos();
+        loadRunningTasks();
+      }, 5000);
       return () => clearInterval(interval);
     }
   }, [currentTab, isAuthenticated]);
@@ -89,6 +95,46 @@ export default function AdminPanel() {
       alert("网络错误");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadRunningTasks = async () => {
+    try {
+      const response = await fetch("http://wonderland.mofa.ai:8000/running-tasks");
+      const result = await response.json();
+      setRunningTasks(result.running_tasks || []);
+    } catch (error) {
+      console.error("获取运行任务失败:", error);
+    }
+  };
+
+  const handleCancelTask = async (taskId: string) => {
+    if (cancellingTasks.has(taskId)) return;
+
+    setCancellingTasks(prev => new Set(prev).add(taskId));
+
+    try {
+      const response = await fetch(`http://wonderland.mofa.ai:8000/cancel-task/${taskId}`, {
+        method: "POST",
+      });
+      
+      const result = await response.json();
+
+      if (result.status === "success") {
+        alert(`任务 ${taskId.substring(0, 8)} 已取消`);
+        loadRunningTasks(); // 刷新运行任务列表
+        loadPhotos(); // 刷新照片列表
+      } else {
+        alert("取消任务失败: " + result.message);
+      }
+    } catch (error) {
+      alert("网络错误，无法取消任务");
+    } finally {
+      setCancellingTasks(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(taskId);
+        return newSet;
+      });
     }
   };
 
@@ -290,6 +336,14 @@ export default function AdminPanel() {
             </div>
 
             <div className="flex items-center space-x-3">
+              {/* 运行任务状态 */}
+              {runningTasks.length > 0 && (
+                <div className="flex items-center space-x-2 bg-[#FFC63E] text-black px-4 py-2 border-4 border-black font-bold">
+                  <Clock className="w-4 h-4 animate-spin" />
+                  <span>{runningTasks.length} 个任务运行中</span>
+                </div>
+              )}
+
               <button
                 onClick={loadPhotos}
                 disabled={loading}
@@ -490,6 +544,30 @@ export default function AdminPanel() {
                         {processingIds.has(photo.id) ? "处理中..." : "拒绝"}
                       </span>
                     </button>
+                  </div>
+                )}
+
+                {/* 处理中状态的取消按钮 */}
+                {currentTab === "pending" && runningTasks.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    <div className="text-xs text-black font-bold bg-[#FFC63E] p-2 text-center">
+                      AI正在生成中...
+                    </div>
+                    {runningTasks.map(taskId => (
+                      <button
+                        key={taskId}
+                        onClick={() => handleCancelTask(taskId)}
+                        disabled={cancellingTasks.has(taskId)}
+                        className="w-full bg-[#FD543F] text-black py-2 px-3 border-4 border-black font-bold hover:bg-black hover:text-[#FD543F] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-1 text-sm transition-colors"
+                      >
+                        <StopCircle className="w-4 h-4" />
+                        <span>
+                          {cancellingTasks.has(taskId) 
+                            ? "取消中..." 
+                            : `取消任务 ${taskId.substring(0, 8)}`}
+                        </span>
+                      </button>
+                    ))}
                   </div>
                 )}
 
