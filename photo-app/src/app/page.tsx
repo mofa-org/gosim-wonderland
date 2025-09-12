@@ -270,9 +270,10 @@ function PhotoApp() {
     startCamera();
   }, [startCamera]);
 
-  const uploadPhoto = useCallback(async () => {
+  const uploadPhoto = useCallback(async (forceUseAI?: boolean) => {
     if (!capturedImage || !userSession) return;
 
+    const actualUseAI = forceUseAI !== undefined ? forceUseAI : useAI;
     setStep("uploading");
 
     try {
@@ -286,7 +287,7 @@ function PhotoApp() {
       if (caption.trim()) {
         formData.append("caption", caption.trim());
       }
-      formData.append("useAI", useAI.toString());
+      formData.append("useAI", actualUseAI.toString());
 
       const uploadResponse = await fetch("/api/upload", {
         method: "POST",
@@ -298,7 +299,7 @@ function PhotoApp() {
       if (result.success) {
         setUploadedPhoto(result.photo);
 
-        if (useAI) {
+        if (actualUseAI) {
           setStep("processing");
           // 轮询检查处理状态
           checkProcessingStatus(result.photo.id);
@@ -662,7 +663,7 @@ function PhotoApp() {
                   <button
                     onClick={() => {
                       setUseAI(true);
-                      uploadPhoto();
+                      uploadPhoto(true);
                     }}
                     className="p-4 border-4 border-black font-bold transition-colors bg-[#6DCACE] text-black hover:bg-black hover:text-[#6DCACE]"
                   >
@@ -673,7 +674,7 @@ function PhotoApp() {
                   <button
                     onClick={() => {
                       setUseAI(false);
-                      uploadPhoto();
+                      uploadPhoto(false);
                     }}
                     className="p-4 border-4 border-black font-bold transition-colors bg-[#FC6A59] text-black hover:bg-black hover:text-[#FC6A59]"
                   >
