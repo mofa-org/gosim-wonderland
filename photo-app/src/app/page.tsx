@@ -715,12 +715,23 @@ function PhotoApp() {
               <p className="text-sm text-black text-center font-bold bg-[#6DCACE] p-3 border-4 border-black">
                 您的图片已上传，稍后将在大屏幕上展示
               </p>
-              <button
-                onClick={resetApp}
-                className="w-full bg-[#6ECACD] text-black py-4 px-6 border-4 border-black font-bold hover:bg-black hover:text-[#6ECACD] transition-colors"
-              >
-                再拍一张
-              </button>
+              <div className="space-y-4">
+                <a
+                  href="http://wonderland.mofa.ai:8081"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full bg-[#FC6A59] text-black py-4 px-6 border-4 border-black font-bold hover:bg-black hover:text-[#FC6A59] transition-colors duration-200 flex items-center justify-center space-x-2"
+                >
+                  <ExternalLink className="w-5 h-5" />
+                  <span>查看大屏展示</span>
+                </a>
+                <button
+                  onClick={resetApp}
+                  className="w-full bg-[#6ECACD] text-black py-4 px-6 border-4 border-black font-bold hover:bg-black hover:text-[#6ECACD] transition-colors"
+                >
+                  再拍一张
+                </button>
+              </div>
             </div>
           )}
 
