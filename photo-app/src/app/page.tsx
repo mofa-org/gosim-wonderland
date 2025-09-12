@@ -44,11 +44,45 @@ function PhotoApp() {
     if (typeof window !== 'undefined' && window.location.hostname === 'test.liyao.space') {
       console.log('检测到test.liyao.space域名，自动启动拍照功能');
       // 稍微延迟以确保组件完全加载
-      setTimeout(() => {
-        startCamera();
+      setTimeout(async () => {
+        try {
+          // 检查浏览器支持
+          if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            console.log('浏览器不支持摄像头功能');
+            return;
+          }
+
+          // 检查是否为HTTPS
+          if (window.location.protocol !== "https:") {
+            console.log('非HTTPS环境，无法启动摄像头');
+            return;
+          }
+
+          // 直接切换到camera状态启动摄像头
+          setStep("camera");
+          
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: "user",
+              width: { ideal: 800 },
+              height: { ideal: 600 },
+            },
+            audio: false,
+          });
+          
+          // 设置视频流到video元素
+          if (videoRef.current && stream) {
+            videoRef.current.srcObject = stream;
+            setIsVideoReady(true);
+          }
+        } catch (error) {
+          console.error('自动启动摄像头失败:', error);
+          // 失败后保持在welcome状态
+          setStep("welcome");
+        }
       }, 500);
     }
-  }, [startCamera]);
+  }, []);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
