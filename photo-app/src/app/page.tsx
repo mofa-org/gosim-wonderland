@@ -39,7 +39,16 @@ function PhotoApp() {
   useEffect(() => {
     // 在客户端生成sessionId，避免SSR不匹配
     setUserSession(generateSessionId());
-  }, []);
+    
+    // 检查是否在test.liyao.space域名，如果是则自动启动拍照
+    if (typeof window !== 'undefined' && window.location.hostname === 'test.liyao.space') {
+      console.log('检测到test.liyao.space域名，自动启动拍照功能');
+      // 稍微延迟以确保组件完全加载
+      setTimeout(() => {
+        startCamera();
+      }, 500);
+    }
+  }, [startCamera]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
