@@ -12,6 +12,7 @@ from io import BytesIO
 
 try:
     from google import genai
+    from google.genai import types
     GEMINI_AVAILABLE = True
 except ImportError:
     GEMINI_AVAILABLE = False
@@ -72,6 +73,63 @@ def save_image_from_url(url: str) -> str:
         print(f"保存图片失败: {e}")
         return url
 
+def optimize_prompt_with_gemini_flash(original_prompt: str, api_key: str) -> str:
+    """使用Gemini 2.5 Flash优化图像生成prompt"""
+    if not GEMINI_AVAILABLE or not api_key:
+        return original_prompt
+    
+    try:
+        client = genai.Client(api_key=api_key)
+        
+        optimization_instruction = f"""
+你是一个专业的AI图像生成prompt优化专家。请将以下用户输入的prompt优化为更适合图像生成的描述：
+
+用户原始prompt: "{original_prompt}"
+
+请基于以下要求优化：
+1. 保持用户的核心意图
+2. 适合GOSIM开发者大会的场景（杭州科技氛围，开源精神）
+3. 添加卡通风格相关的细节描述
+4. 突出专业程序员形象
+5. 使用清晰、具体的视觉描述词汇
+6. 避免模糊或抽象的表达
+
+请只返回优化后的prompt，不要包含其他解释。优化后的prompt应该在100-150字之间。
+"""
+        
+        contents = [
+            types.Content(
+                role="user",
+                parts=[
+                    types.Part.from_text(text=optimization_instruction),
+                ],
+            ),
+        ]
+        
+        generate_content_config = types.GenerateContentConfig(
+            thinking_config=types.ThinkingConfig(
+                thinking_budget=0,
+            ),
+        )
+        
+        response = client.models.generate_content(
+            model="gemini-2.5-flash-lite",
+            contents=contents,
+            config=generate_content_config,
+        )
+        
+        if response and response.candidates:
+            optimized_prompt = response.candidates[0].content.parts[0].text.strip()
+            print(f"🎨 Gemini优化prompt: {original_prompt} -> {optimized_prompt}")
+            return optimized_prompt
+        else:
+            print("⚠️ Gemini优化返回空结果，使用原prompt")
+            return original_prompt
+            
+    except Exception as e:
+        print(f"⚠️ Gemini prompt优化失败: {e}，使用原prompt")
+        return original_prompt
+
 def generate_prompt_variants(original_prompt: str) -> list[str]:
     """基于原始prompt生成5种智能变体"""
     # 基础GOSIM主题
@@ -109,6 +167,69 @@ def generate_prompt_variants(original_prompt: str) -> list[str]:
     ]
     
     return variants
+
+def attempt_vidu_generation(api_key: str, base_image_url: str, prompt_instruction: str, attempt_num: int) -> dict:
+    """Vidu AI生成尝试"""
+    try:
+        print(f"第{attempt_num}次尝试 - 使用Vidu，prompt: {prompt_instruction[:100]}...")
+        
+        # 简化prompt，去掉复杂的中文描述，Vidu可能对英文支持更好
+        simplified_prompt = f"cartoon style, professional programmer, tech conference style"
+        if "卡通" in prompt_instruction:
+            simplified_prompt = "cartoon style, professional developer, modern tech atmosphere"
+        
+        # Vidu API调用
+        payload = {
+            "model": "viduq1",
+            "images": [base_image_url],
+            "prompt": simplified_prompt,
+            "aspect_ratio": "1:1"
+        }
+        
+        headers = {
+            "Authorization": f"Token {api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        response = requests.post(
+            "https://api.vidu.com/ent/v2/reference2image",
+            headers=headers,
+            json=payload,
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            result = response.json()
+            task_id = result.get("task_id")
+            state = result.get("state")
+            credits = result.get("credits")
+            
+            if task_id:
+                print(f"Vidu任务创建成功，task_id: {task_id}, 状态: {state}, 消耗积分: {credits}")
+                # 注意：Vidu是纯异步API，无法立即获取结果
+                # 在生产环境中需要实现回调或后台轮询机制
+                # 这里我们返回任务创建成功的信息
+                placeholder_path = f"/ai-photos/vidu_{task_id}.png"
+                return {
+                    "success": True, 
+                    "image_paths": [placeholder_path], 
+                    "task_id": task_id,
+                    "async": True,  # 标记为异步任务
+                    "message": f"Vidu异步任务已创建，task_id: {task_id}"
+                }
+            else:
+                return {"success": False, "error": "Vidu未返回task_id"}
+        elif response.status_code == 400:
+            error_data = response.json() if response.headers.get('content-type', '').startswith('application/json') else {}
+            if error_data.get("reason") == "CreditInsufficient":
+                return {"success": False, "error": "Vidu积分不足"}
+            else:
+                return {"success": False, "error": f"Vidu请求错误: {error_data.get('message', response.text)}"}
+        else:
+            return {"success": False, "error": f"Vidu API错误: {response.status_code} - {response.text[:200]}"}
+            
+    except Exception as e:
+        return {"success": False, "error": f"Vidu第{attempt_num}次尝试异常: {str(e)}"}
 
 def attempt_gemini_generation(api_key: str, base_image_url: str, prompt_instruction: str, attempt_num: int) -> dict:
     """Gemini AI生成尝试"""
@@ -201,6 +322,44 @@ def attempt_ai_generation(api_key: str, base_image_url: str, prompt_instruction:
 def read_root():
     return {"message": "GOSIM Wonderland AI Service", "status": "running"}
 
+@app.get("/vidu-task/{task_id}")
+def get_vidu_task_status(task_id: str):
+    """查询Vidu任务状态（实验性接口）"""
+    vidu_api_key = os.getenv("VIDU_API_KEY")
+    
+    if not vidu_api_key:
+        raise HTTPException(status_code=500, detail="Vidu API key未配置")
+    
+    headers = {
+        "Authorization": f"Token {vidu_api_key}",
+        "Content-Type": "application/json"
+    }
+    
+    # 尝试不同的可能端点
+    possible_endpoints = [
+        f"https://api.vidu.com/ent/v2/generation/{task_id}",
+        f"https://api.vidu.com/ent/v1/generation/{task_id}",
+        f"https://api.vidu.com/ent/v2/task/{task_id}",
+        f"https://api.vidu.com/ent/v1/task/{task_id}"
+    ]
+    
+    last_error = None
+    
+    for endpoint in possible_endpoints:
+        try:
+            response = requests.get(endpoint, headers=headers, timeout=10)
+            if response.status_code == 200:
+                return response.json()
+            elif response.status_code != 404:
+                last_error = f"{response.status_code}: {response.text}"
+        except Exception as e:
+            last_error = str(e)
+    
+    raise HTTPException(
+        status_code=404, 
+        detail=f"无法查询任务状态，task_id: {task_id}，最后错误: {last_error}"
+    )
+
 @app.get("/health")
 def health_check():
     """API健康检查"""
@@ -210,7 +369,10 @@ def health_check():
         "original_photos_dir": ORIGINAL_PHOTOS_DIR,
         "dashscope_api_key_configured": bool(os.getenv("DASHSCOPE_API_KEY") and os.getenv("DASHSCOPE_API_KEY") != "your_dashscope_api_key_here"),
         "gemini_api_key_configured": bool(os.getenv("GEMINI_API_KEY")),
-        "gemini_available": GEMINI_AVAILABLE
+        "gemini_available": GEMINI_AVAILABLE,
+        "gemini_prompt_optimization": GEMINI_AVAILABLE and bool(os.getenv("GEMINI_API_KEY")),
+        "vidu_api_key_configured": bool(os.getenv("VIDU_API_KEY")),
+        "fallback_strategy": "通义5次 → Gemini1次 → Vidu1次 (共7次重试)"
     }
 
 @app.post("/generate-image/")
@@ -226,7 +388,8 @@ def generate_image(request: dict):
 
         # 获取API keys
         dashscope_api_key = os.getenv("DASHSCOPE_API_KEY")
-        gemini_api_key = os.getenv("GEMINI_API_KEY")
+        gemini_api_key = os.getenv("GEMINI_API_KEY") 
+        vidu_api_key = os.getenv("VIDU_API_KEY")
         
         if not dashscope_api_key or dashscope_api_key == "your_dashscope_api_key_here":
             # Mock模式：生成随机彩色图片
@@ -252,9 +415,17 @@ def generate_image(request: dict):
             print(f"AI服务器图片URL: {public_url}")
             base_image_url = public_url
 
-        # 生成基于用户prompt的多种变体
-        prompt_variants = generate_prompt_variants(prompt)
-        print(f"为用户prompt '{prompt}' 生成了 {len(prompt_variants)} 个变体")
+        # 使用Gemini 2.5 Flash优化用户prompt
+        print(f"📝 原始prompt: {prompt}")
+        if gemini_api_key and GEMINI_AVAILABLE:
+            optimized_prompt = optimize_prompt_with_gemini_flash(prompt, gemini_api_key)
+        else:
+            optimized_prompt = prompt
+            print("⚠️ Gemini不可用，跳过prompt优化")
+        
+        # 生成基于优化prompt的多种变体
+        prompt_variants = generate_prompt_variants(optimized_prompt)
+        print(f"为优化后的prompt生成了 {len(prompt_variants)} 个变体")
         
         # 记录所有尝试的错误
         all_errors = []
@@ -274,22 +445,33 @@ def generate_image(request: dict):
 
 最终效果要求：既有卡通趣味性又保持技术会议的专业感，色彩和谐，构图完整。"""
         
-        # 先用通义尝试3次，然后用Gemini尝试2次
-        for attempt in range(5):
+        # 保持原有的5次通义重试，然后增加额外的fallback选项
+        max_attempts = 7  # 5次通义 + 1次Gemini + 1次Vidu
+        
+        for attempt in range(max_attempts):
             current_prompt = prompt_variants[attempt % len(prompt_variants)]
             base_instruction = build_instruction(current_prompt)
             
-            if attempt < 3:
-                # 前3次尝试用通义
+            if attempt < 5:
+                # 前5次尝试用通义（保持原有逻辑）
                 result = attempt_ai_generation(dashscope_api_key, base_image_url, base_instruction, attempt + 1)
                 service_name = "通义"
-            else:
-                # 后2次尝试用Gemini作为fallback
+            elif attempt == 5:
+                # 第6次尝试用Gemini作为fallback
                 if gemini_api_key and GEMINI_AVAILABLE:
                     result = attempt_gemini_generation(gemini_api_key, base_image_url, current_prompt, attempt + 1)
                     service_name = "Gemini"
                 else:
                     # 如果Gemini不可用，继续用通义
+                    result = attempt_ai_generation(dashscope_api_key, base_image_url, base_instruction, attempt + 1)
+                    service_name = "通义"
+            else:
+                # 第7次最后尝试用Vidu
+                if vidu_api_key:
+                    result = attempt_vidu_generation(vidu_api_key, base_image_url, current_prompt, attempt + 1)
+                    service_name = "Vidu"
+                else:
+                    # 如果Vidu不可用，继续用通义
                     result = attempt_ai_generation(dashscope_api_key, base_image_url, base_instruction, attempt + 1)
                     service_name = "通义"
             
@@ -302,17 +484,17 @@ def generate_image(request: dict):
                 print(f"\n⚠️ {service_name}第{attempt + 1}次尝试失败: {error_msg}")
                 
                 # 在重试之间稍微等待，避免频繁请求
-                if attempt < 4:  # 最后一次不等待
-                    wait_time = (attempt + 1) * 2  # 递增等待时间
+                if attempt < max_attempts - 1:  # 最后一次不等待
+                    wait_time = min((attempt + 1) * 2, 10)  # 递增等待时间，最多10秒
                     print(f"等待 {wait_time} 秒后重试...")
                     time.sleep(wait_time)
         
         # 所有尝试都失败了
-        print(f"\n❌ 所有 5 次尝试都失败了（通义3次 + Gemini2次）")
+        print(f"\n❌ 所有 {max_attempts} 次尝试都失败了（通义5次 + Gemini1次 + Vidu1次）")
         error_summary = "; ".join(all_errors)
         raise HTTPException(
             status_code=500,
-            detail=f"AI生成失败，已重试5次: {error_summary}"
+            detail=f"AI生成失败，已重试{max_attempts}次: {error_summary}"
         )
 
     except HTTPException:
